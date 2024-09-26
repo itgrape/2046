@@ -1,0 +1,51 @@
+FROM ohpc-container/openhpc:3
+LABEL maintainer="pushihao@njust.edu.cn"
+
+ENV http_proxy="http://192.168.246.29:7890"
+ENV https_proxy="http://192.168.246.29:7890"
+
+RUN dnf install -y supervisor && \
+    dnf install -y ohpc-slurm-server && \
+    dnf install -y openssh-server
+
+RUN cp /etc/slurm/slurm.conf.example /etc/slurm/slurm.conf && \
+    perl -pi -e "s/SlurmctldHost=\S+/SlurmctldHost=head/" /etc/slurm/slurm.conf && \
+    perl -pi -e "s/ProctrackType=\S+/ProctrackType=proctrack\/linuxproc/" /etc/slurm/slurm.conf && \
+    perl -pi -e "s/^TaskPlugin=\S+/#TaskPlugin=/" /etc/slurm/slurm.conf && \
+    perl -pi -e 'if (/^ReturnToService=1/) { $count++; if ($count == 2) { s/^/#/; } }' /etc/slurm/slurm.conf && \
+    cp /etc/slurm/cgroup.conf.example /etc/slurm/cgroup.conf && \
+    echo 'CgroupPlugin=cgroup/v1' >> /etc/slurm/cgroup.conf && \
+    perl -pi -e 's/^NodeName=c\[1-4\].*$/NodeName=node-[0-7] State=UNKNOWN/' /etc/slurm/slurm.conf && \
+    perl -pi -e 's/Nodes=c\[1-4\]/Nodes=node-[0-7]/' /etc/slurm/slurm.conf && \
+    chmod 755 /var/log
+
+# Slurmdbd Service
+RUN cp /etc/slurm/slurmdbd.conf.example /etc/slurm/slurmdbd.conf && \
+    perl -pi -e "s/^#AuthInfo=\S+/AuthInfo=\/var\/run\/munge\/munge.socket.2/" /etc/slurm/slurmdbd.conf && \
+    perl -pi -e "s/^#DbdPort=\S+/DbdPort=6819/" /etc/slurm/slurmdbd.conf && \
+    # >>> Database Info Start
+    perl -pi -e "s/^#StorageHost=\S+/StorageHost=mysql/" /etc/slurm/slurmdbd.conf && \
+    perl -pi -e "s/^#StoragePort=\S+/StoragePort=3306/" /etc/slurm/slurmdbd.conf && \
+    perl -pi -e "s/^StoragePass=\S+/StoragePass=root/" /etc/slurm/slurmdbd.conf && \
+    perl -pi -e "s/^StorageUser=\S+/StorageUser=root/" /etc/slurm/slurmdbd.conf && \
+    perl -pi -e "s/^#StorageLoc=\S+/StorageLoc=slurm/" /etc/slurm/slurmdbd.conf && \
+    # >>> Databse Info End
+    chown slurm:slurm /etc/slurm/slurmdbd.conf && \
+    chmod 600 /etc/slurm/slurmdbd.conf && \
+    mkdir /var/log/slurm && touch /var/log/slurm/slurmdbd.log && \
+    chown root:root /var/log/munge/ && \
+    chmod 600 /var/log/munge/ && \
+    perl -pi -e 's/^#AccountingStorageEnforce=\S+/AccountingStorageEnforce=limits,qos/' /etc/slurm/slurm.conf && \
+    perl -pi -e 's/^#AccountingStoragePort=/AccountingStoragePort=6819/' /etc/slurm/slurm.conf && \
+    perl -pi -e 's/^AccountingStorageType=\S+/AccountingStorageType=accounting_storage\/slurmdbd/' /etc/slurm/slurm.conf
+
+# SSH Service
+RUN ssh-keygen -A && \
+    perl -pi -e "s/^#PermitRootLogin[ ]\S+/PermitRootLogin yes/" /etc/ssh/sshd_config && \
+    perl -pi -e "s/^#StrictModes[ ]\S+/StrictModes no/" /etc/ssh/sshd_config && \
+    perl -pi -e "s/^#PasswordAuthentication[ ]\S+/PasswordAuthentication yes/" /etc/ssh/sshd_config
+
+# Use Supervisor For Multi-Program
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

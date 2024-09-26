@@ -1,9 +1,6 @@
 FROM ohpc-container/openhpc:3
 LABEL maintainer="pushihao@njust.edu.cn"
 
-ENV http_proxy="http://192.168.246.29:7890"
-ENV https_proxy="http://192.168.246.29:7890"
-
 RUN dnf install -y supervisor && \
     dnf install -y ohpc-slurm-server && \
     dnf install -y openssh-server

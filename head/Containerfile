@@ -12,6 +12,7 @@ RUN dnf install -y supervisor && \
 COPY slurm.conf /etc/slurm/slurm.conf
 COPY slurmdbd.conf /etc/slurm/slurmdbd.conf
 COPY cgroup.conf /etc/slurm/cgroup.conf
+COPY sshd_config /etc/ssh/sshd_config
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # SSH Service
@@ -24,6 +25,9 @@ RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && \
     chmod 755 /var/log && \
     chown root:root /var/log/munge/ && \
     chmod 600 /var/log/munge/
+
+# Set root password
+RUN echo 'root:root' | chpasswd
 
 # Use Supervisor For Multi-Program
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

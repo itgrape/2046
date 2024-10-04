@@ -18,6 +18,12 @@ RUN dnf install -y spack-ohpc ohpc-gnu13-openmpi5-parallel-libs \
 RUN ssh-keygen -A
 COPY sshd_config /etc/ssh/sshd_config
 
+# Pam Slurm Adopt
+COPY pam.d/sshd /etc/pam.d/sshd
+COPY pam.d/system-auth /etc/pam.d/system-auth
+COPY pam.d/password-auth /etc/pam.d/password-auth
+RUN echo "root" > /etc/ssh/allowed_users_file && chmod 600 /etc/ssh/allowed_users_file
+
 # User Supervisor For Multi-Program
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 CMD ["usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

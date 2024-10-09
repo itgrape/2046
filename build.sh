@@ -4,7 +4,6 @@ user=${USER:-$USER}
 arch=$(uname -m)
 
 echo "=== setup docker"
-docker volume create ohpc-container-project
 docker network create ohpc-container-network
 
 set -e
@@ -17,3 +16,5 @@ for I in head node ; do
   echo "=== build $I"
   docker build -t ohpc-container/$I -f $I/Containerfile $I
 done
+
+docker image prune -f

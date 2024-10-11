@@ -3,16 +3,16 @@
 network=--network=ohpc-container-network
 volume=--volume=/home:/home
 
-echo "=== Start MySQL"
-docker run -d --rm -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root $network --name=mysql --hostname=mysql mysql
+# echo "=== Start MySQL"
+# docker run -d --rm -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root $network --name=mysql --hostname=mysql mysql
 
 echo "=== Start cluster"
-docker run -d --rm -p 2222:22 $network $volume --name=head --hostname=head ohpc-container/head
+docker run -d --rm --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup -p 2222:22 $network $volume --name=head --hostname=head ohpc-container/head:systemd
 for I in {0..7} ; do
-  docker run -d --rm $network $volume --name=node-$I --hostname=node-$I ohpc-container/node
+  docker run -d --rm --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup $network $volume --name=node-$I --hostname=node-$I ohpc-container/node:systemd
 done
 
 
 # test
 # docker run -d -p 2222:22 --rm --network=ohpc-container-network --name=head --hostname=head ohpc-container/head
-# docker exec -it head /bin/bash
+docker exec -it head /bin/bash

@@ -1,20 +1,22 @@
-FROM ohpc-container/openhpc:3
+FROM ohpc-container/openhpc3:systemd
 LABEL maintainer="pushihao@njust.edu.cn"
 
-## Base compute node
+ENV http_proxy='http://10.10.11.82:9500'
+ENV https_proxy='http://10.10.11.82:9500'
+
+# Base compute node
 RUN dnf install -y ohpc-base-compute ohpc-slurm-client lmod-ohpc \
     git patch file zstd bzip2 xz \
     python3 python3-pip \
     gcc-c++ gcc-gfortran \
     ohpc-gnu13-runtimes gnu13-compilers-ohpc \ 
     openmpi5-pmix-gnu13-ohpc openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
-    openssh-server \
-    supervisor
+    openssh-server
 
 RUN dnf install -y spack-ohpc ohpc-gnu13-openmpi5-parallel-libs \
     ohpc-gnu13-python-libs ohpc-gnu13-runtimes
 
-# SSH Service
+# SSH service
 RUN ssh-keygen -A
 COPY sshd_config /etc/ssh/sshd_config
 
@@ -24,6 +26,13 @@ COPY pam.d/system-auth /etc/pam.d/system-auth
 COPY pam.d/password-auth /etc/pam.d/password-auth
 RUN echo "root" > /etc/ssh/allowed_users_file && chmod 600 /etc/ssh/allowed_users_file
 
-# User Supervisor For Multi-Program
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-CMD ["usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Start service
+RUN systemctl enable munge && \
+    systemctl enable slurmd && \
+    systemctl enable sshd
+
+# Slurmd service need some extra parameter
+COPY slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
+
+# Use systemd
+CMD ["/usr/sbin/init"]

@@ -1,6 +1,22 @@
 FROM registry.docker.com/library/rockylinux:9
 LABEL maintainer="pushihao@njust.edu.cn"
 
+ENV http_proxy='http://10.10.11.82:9500'
+ENV https_proxy='http://10.10.11.82:9500'
+
+# Use systemd
+RUN yum -y install systemd systemd-libs
+RUN yum clean all; \
+(cd /lib/systemd/system/sysinit.target.wants/; for i in *; \
+do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+rm -f /lib/systemd/system/multi-user.target.wants/*;\
+rm -f /etc/systemd/system/*.wants/*;\
+rm -f /lib/systemd/system/local-fs.target.wants/*; \
+rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+rm -f /lib/systemd/system/basic.target.wants/*;\
+rm -f /lib/systemd/system/anaconda.target.wants/*;
+
 # Base install
 ARG ARCH=x86_64
 RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-release-3-1.el9.$ARCH.rpm
@@ -10,12 +26,9 @@ RUN dnf install -y dnf-plugins-core && \
     dnf upgrade -y && \
     dnf swap -y curl-minimal curl && \
     dnf install -y curl unzip jq procps-ng iproute bind-utils findutils && \
-    dnf install -y ohpc-base
+    dnf install -y ohpc-base && \
+    dnf install -y iputils vim rsync unzip git sendmail
 
-# Configure common image
+# Munge service
 RUN dnf install -y munge && \
     /usr/sbin/create-munge-key
-
-# Common packages
-RUN dnf install -y iputils vim rsync unzip git
-

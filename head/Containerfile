@@ -1,4 +1,4 @@
-FROM ohpc-container/openhpc3:systemd
+FROM ohpc-container/openhpc:3
 LABEL maintainer="pushihao@njust.edu.cn"
 
 ENV http_proxy='http://10.10.11.82:9500'

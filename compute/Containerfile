@@ -11,13 +11,15 @@ RUN dnf install -y ohpc-base-compute ohpc-slurm-client lmod-ohpc \
     gcc-c++ gcc-gfortran \
     ohpc-gnu13-runtimes gnu13-compilers-ohpc \ 
     openmpi5-pmix-gnu13-ohpc openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
-    openssh-server
+    spack-ohpc ohpc-gnu13-openmpi5-parallel-libs \
+    ohpc-gnu13-python-libs ohpc-gnu13-runtimes \
+    ipa-client
 
-RUN dnf install -y spack-ohpc ohpc-gnu13-openmpi5-parallel-libs \
-    ohpc-gnu13-python-libs ohpc-gnu13-runtimes
+# Install IPA-client
+COPY ipa-client-install.sh /usr/tmp/ipa-client-install.sh
+RUN chmod +x /usr/tmp/ipa-client-install.sh
 
-# SSH service
-RUN ssh-keygen -A
+# SSH configuration
 COPY sshd_config /etc/ssh/sshd_config
 
 # Pam Slurm Adopt
@@ -25,6 +27,9 @@ COPY pam.d/sshd /etc/pam.d/sshd
 COPY pam.d/system-auth /etc/pam.d/system-auth
 COPY pam.d/password-auth /etc/pam.d/password-auth
 RUN echo "root" > /etc/ssh/allowed_users_file && chmod 600 /etc/ssh/allowed_users_file
+
+# Set root password
+RUN echo 'root:root' | chpasswd
 
 # Start service
 RUN systemctl enable munge && \

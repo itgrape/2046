@@ -5,16 +5,17 @@ ENV http_proxy='http://10.10.11.82:9500'
 ENV https_proxy='http://10.10.11.82:9500'
 
 # Base install
-RUN dnf install -y ohpc-slurm-server openssh-server
+RUN dnf install -y ohpc-slurm-server ipa-client
+
+# Install IPA-client
+COPY ipa-client-install.sh /usr/tmp/ipa-client-install.sh
+RUN chmod +x /usr/tmp/ipa-client-install.sh
 
 # Copy configuration
 COPY slurm.conf /etc/slurm/slurm.conf
 COPY slurmdbd.conf /etc/slurm/slurmdbd.conf
 COPY cgroup.conf /etc/slurm/cgroup.conf
 COPY sshd_config /etc/ssh/sshd_config
-
-# SSH service
-RUN ssh-keygen -A
 
 # File permissions
 RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf && \

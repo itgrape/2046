@@ -15,8 +15,11 @@ docker build -t ohpc-container/openhpc:3 -f openhpc/Containerfile openhpc \
 echo "=== build head"
 docker build -t ohpc-container/head -f head/Containerfile head
 
-echo "=== build node"
-docker build -t ohpc-container/node -f node/Containerfile node
+echo "=== build compute"
+docker build -t ohpc-container/compute -f compute/Containerfile compute
+
+echo "=== build ipa"
+docker build -t ohpc-container/ipa -f ipa/Containerfile ipa
 
 
 docker image prune -f

@@ -42,7 +42,7 @@ PermitRootLogin yes
 #MaxAuthTries 6
 #MaxSessions 10
 
-#PubkeyAuthentication yes
+PubkeyAuthentication yes
 
 # The default is to check both .ssh/authorized_keys and .ssh/authorized_keys2
 # but this is overridden so installations will only check .ssh/authorized_keys
@@ -93,7 +93,7 @@ GSSAPICleanupCredentials yes
 # and KbdInteractiveAuthentication to 'no'.
 # WARNING: 'UsePAM no' is not supported in RHEL and may cause several
 # problems.
-UsePAM no
+UsePAM yes
 
 #AllowAgentForwarding yes
 #AllowTcpForwarding yes

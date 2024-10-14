@@ -18,6 +18,7 @@ RUN dnf install -y ohpc-base-compute ohpc-slurm-client lmod-ohpc \
 # Install IPA-client
 COPY ipa-client-install.sh /usr/tmp/ipa-client-install.sh
 RUN chmod +x /usr/tmp/ipa-client-install.sh
+RUN /usr/tmp/ipa-client-install.sh
 
 # SSH configuration
 COPY sshd_config /etc/ssh/sshd_config
@@ -31,13 +32,13 @@ RUN echo "root" > /etc/ssh/allowed_users_file && chmod 600 /etc/ssh/allowed_user
 # Set root password
 RUN echo 'root:root' | chpasswd
 
-# Start service
+# Slurmd service need some extra parameter
+COPY slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
+
+# Enable service
 RUN systemctl enable munge && \
     systemctl enable slurmd && \
     systemctl enable sshd
-
-# Slurmd service need some extra parameter
-COPY slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
 
 # Use systemd
 CMD ["/usr/sbin/init"]

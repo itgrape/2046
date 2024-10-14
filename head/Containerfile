@@ -26,7 +26,10 @@ RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.
 # Set root password
 RUN echo 'root:root' | chpasswd
 
-# Start service
+# Define service boot order
+COPY slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
+
+# Enable service
 RUN systemctl enable munge && \
     systemctl enable slurmdbd && \
     systemctl enable slurmctld && \

@@ -5,8 +5,7 @@ DOMAIN=example.com
 REALM=EXAMPLE.COM
 LOGFILE="/var/log/ipaclient-install.log"
 
-echo "Starting FreeIPA client installation"
-echo "Logfile: ${LOGFILE}"
+echo "Starting FreeIPA client installation..."
 
 ipa-client-install -U \
     --hostname=$(hostname) \

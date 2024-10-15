@@ -7,8 +7,7 @@ REALM=EXAMPLE.COM
 PASSWORD=admin_password
 LOGFILE="/var/log/ipaserver-install.log"
 
-echo "Starting FreeIPA server installation"
-echo "Logfile: ${LOGFILE}"
+echo "Starting FreeIPA server installation..."
 
 ipa-server-install -U \
     --skip-mem-check \
@@ -23,6 +22,7 @@ ipa-server-install -U \
     --allow-zone-overlap > ${LOGFILE} 2>&1
 
 if [ $? -eq 0 ]; then
+    echo "session required pam_mkhomedir.so skel=/etc/skel/ umask=0077" >> /etc/pam.d/system-auth
     echo "FreeIPA server installation completed successfully."
 else
     echo "FreeIPA server installation failed. Check the logfile at ${LOGFILE} for details."

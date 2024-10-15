@@ -38,7 +38,7 @@ Port 2222
 
 #LoginGraceTime 2m
 PermitRootLogin yes
-#StrictModes no
+StrictModes no
 #MaxAuthTries 6
 #MaxSessions 10
 
@@ -93,7 +93,7 @@ GSSAPICleanupCredentials yes
 # and KbdInteractiveAuthentication to 'no'.
 # WARNING: 'UsePAM no' is not supported in RHEL and may cause several
 # problems.
-UsePAM no
+UsePAM yes
 
 #AllowAgentForwarding yes
 #AllowTcpForwarding yes

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IPA_SERVER=ipa.example.com
+IPA_SERVER=head.example.com
 DOMAIN=example.com
 REALM=EXAMPLE.COM
 LOGFILE="/var/log/ipaclient-install.log"
@@ -13,6 +13,7 @@ ipa-client-install -U \
     --mkhomedir \
     --server=$IPA_SERVER \
     --domain=$DOMAIN \
+    --force \
     --realm=$REALM \
     --principal=admin \
     --password=admin_password \

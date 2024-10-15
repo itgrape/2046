@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IPA_SERVER_HOSTNAME=ipa.example.com
+IPA_SERVER_HOSTNAME=head.example.com
 IPA_SERVER_IP=$(hostname -I | awk '{print $1}')
 DOMAIN=example.com
 REALM=EXAMPLE.COM

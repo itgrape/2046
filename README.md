@@ -2,7 +2,12 @@
 
 安装docker：https://docs.docker.com/engine/install/rhel/
 
-容器共有一个head节点和数个compute节点，启动服务后将自动创建1个MySQL容器用于Slurmdbd相关服务
+集群共有一个head节点和数个compute节点，相关容器有：
+
+- MySQL容器，数据存储
+- IPA容器，权限认证
+- Head容器，Slurm控制节点
+- Compute容器，Slurm计算节点
 
 ## 开放主机端口
 
@@ -55,7 +60,8 @@ sudo firewall-cmd --reload
 # head
 ./build-control-node.sh
 ./run-control-node.sh
-docker exec -it head /usr/tmp/ipa-server-install.sh
+docker exec -it ipa /usr/tmp/ipa-server-install.sh
+docker exec -it head /usr/tmp/ipa-client-install.sh
 
 # compute
 ./build-compute-node.sh
@@ -108,6 +114,9 @@ sacctmgr add account <accountname>
 
 #添加user
 sacctmgr add user <username> account=<accountname>
+
+#删除user
+sacctmgr remove user <username>
 
 #创建qos并进行资源限制
 sacctmgr add qos <qosname> MaxJobs=1 ...

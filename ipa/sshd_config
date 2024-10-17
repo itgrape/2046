@@ -18,7 +18,7 @@ Include /etc/ssh/sshd_config.d/*.conf
 # SELinux about this change.
 # semanage port -a -t ssh_port_t -p tcp #PORTNUMBER
 #
-Port 2222
+Port 2223
 #AddressFamily any
 #ListenAddress 0.0.0.0
 #ListenAddress ::
@@ -42,7 +42,7 @@ StrictModes no
 #MaxAuthTries 6
 #MaxSessions 10
 
-PubkeyAuthentication yes
+#PubkeyAuthentication yes
 
 # The default is to check both .ssh/authorized_keys and .ssh/authorized_keys2
 # but this is overridden so installations will only check .ssh/authorized_keys

@@ -9,6 +9,9 @@
 #   --build-arg USER=$user \
 #   --build-arg ARCH=$arch
 
+echo "=== build ipa"
+docker build -t ohpc-container/ipa -f ipa/Containerfile ipa
+
 echo "=== build head"
 docker build -t ohpc-container/head -f head/Containerfile head
 

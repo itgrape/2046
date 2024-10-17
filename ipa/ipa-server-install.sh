@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IPA_SERVER_HOSTNAME=head.example.com
+IPA_SERVER_HOSTNAME=ipa.example.com
 IPA_SERVER_IP=$(hostname -I | awk '{print $1}')
 DOMAIN=example.com
 REALM=EXAMPLE.COM
@@ -22,7 +22,7 @@ ipa-server-install -U \
     --allow-zone-overlap > ${LOGFILE} 2>&1
 
 if [ $? -eq 0 ]; then
-    echo "session required pam_mkhomedir.so skel=/etc/skel/ umask=0077" >> /etc/pam.d/system-auth
+    # echo "session required pam_mkhomedir.so skel=/etc/skel/ umask=0077" >> /etc/pam.d/system-auth
     echo "FreeIPA server installation completed successfully."
 else
     echo "FreeIPA server installation failed. Check the logfile at ${LOGFILE} for details."

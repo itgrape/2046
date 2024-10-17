@@ -5,12 +5,12 @@ ENV http_proxy='http://10.10.11.82:9500'
 ENV https_proxy='http://10.10.11.82:9500'
 
 # Base install
-RUN dnf install -y ohpc-slurm-server
+RUN dnf install -y ohpc-slurm-server && \
+    dnf install -y ipa-client
 
-# Install FreeIPA
-RUN dnf install -y ipa-server ipa-server-dns bind-utils
-COPY ipa-server-install.sh /usr/tmp/ipa-server-install.sh
-RUN chmod +x /usr/tmp/ipa-server-install.sh
+# Install IPA-client
+COPY ipa-client-install.sh /usr/tmp/ipa-client-install.sh
+RUN chmod +x /usr/tmp/ipa-client-install.sh
 
 # Copy configuration
 COPY slurm.conf /etc/slurm/slurm.conf

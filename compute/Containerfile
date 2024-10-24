@@ -31,9 +31,20 @@ RUN echo "root" > /etc/ssh/allowed_users_file && chmod 600 /etc/ssh/allowed_user
 # Set root password
 RUN echo 'root:root' | chpasswd
 
-# Delete nologin file
+# Run after run
 RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
+    echo "mount -o remount,rw /sys/fs/cgroup" >> /etc/rc.local && \
+    echo "chmod -R u+w /sys/fs/cgroup" >> /etc/rc.local && \
     chmod +x /etc/rc.local
+
+# Prolog && Epilog
+COPY prolog.sh /etc/slurm/prolog.sh
+COPY epilog.sh /etc/slurm/epilog.sh
+COPY check_GPU.sh /etc/slurm/check_GPU.sh
+RUN mkdir /var/log/slurm && \
+    chmod +x /etc/slurm/prolog.sh && \
+    chmod +x /etc/slurm/epilog.sh && \
+    chmod +x /etc/slurm/check_GPU.sh
 
 # Slurmd service need some extra parameter
 COPY slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf

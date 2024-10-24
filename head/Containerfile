@@ -17,6 +17,7 @@ COPY slurm.conf /etc/slurm/slurm.conf
 COPY slurmdbd.conf /etc/slurm/slurmdbd.conf
 COPY cgroup.conf /etc/slurm/cgroup.conf
 COPY sshd_config /etc/ssh/sshd_config
+COPY gres.conf /etc/slurm/gres.conf
 
 # File permissions
 RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf && \

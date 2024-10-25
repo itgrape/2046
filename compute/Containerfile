@@ -15,6 +15,12 @@ RUN dnf install -y ohpc-base-compute ohpc-slurm-client lmod-ohpc && \
     dnf install -y spack-ohpc ohpc-gnu13-openmpi5-parallel-libs && \
     dnf install -y ohpc-gnu13-python-libs ohpc-gnu13-runtimes
 
+# Install Salt
+RUN rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/SALT-PROJECT-GPG-PUBKEY-2023.pub && \
+    curl -fsSL https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest.repo | sudo tee /etc/yum.repos.d/salt.repo && \
+    dnf install -y salt-minion
+RUN echo "master: head.example.com" >> /etc/salt/minion
+
 # SSH configuration
 COPY sshd_config /etc/ssh/sshd_config
 
@@ -48,7 +54,8 @@ COPY slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
 # Enable service
 RUN systemctl enable munge && \
     systemctl enable slurmd && \
-    systemctl enable sshd
+    systemctl enable sshd && \
+    systemctl enable salt-minion
 
 # Use systemd
 CMD ["/usr/sbin/init"]

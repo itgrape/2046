@@ -1,0 +1,10 @@
+[Unit]
+Description=User Monitoring Service
+
+[Service]
+ExecStart=/usr/local/bin/monitor_user.sh
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

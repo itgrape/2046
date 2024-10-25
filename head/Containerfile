@@ -3,9 +3,20 @@ LABEL maintainer="pushihao@njust.edu.cn"
 
 ENV http_proxy='http://10.10.11.82:9500'
 ENV https_proxy='http://10.10.11.82:9500'
+RUN export https_proxy=http://10.10.11.82:9500 http_proxy=http://10.10.11.82:9500 all_proxy=socks5://10.10.11.82:9501
 
 # Base install
-RUN dnf install -y ohpc-slurm-server
+RUN dnf install -y ohpc-slurm-server && \
+    dnf install -y inotify-tools
+
+# Install Salt
+RUN rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/SALT-PROJECT-GPG-PUBKEY-2023.pub && \
+    curl -fsSL https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest.repo | sudo tee /etc/yum.repos.d/salt.repo && \
+    dnf install -y salt-master
+
+# Salt sync config
+RUN mkdir -p /srv/salt/auth_files && mkdir -p /var/log/slurm
+COPY sync_auth_files.sls /srv/salt/sync_auth_files.sls
 
 # Copy configuration
 COPY slurm.conf /etc/slurm/slurm.conf
@@ -30,16 +41,18 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
 # Define service boot order
 COPY slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
 
+# Copy Script
+COPY monitor_user.sh /usr/local/bin/monitor_user.sh
+RUN chmod +x /usr/local/bin/monitor_user.sh
+
 # Enable service
+COPY monitor-user.service /etc/systemd/system/monitor-user.service
 RUN systemctl enable munge && \
     systemctl enable slurmdbd && \
     systemctl enable slurmctld && \
-    systemctl enable sshd
-
-# Copy Script
-COPY copy_auth_files.sh /usr/local/bin/copy_auth_files.sh
-COPY ssh_copy_id.sh /usr/local/bin/ssh_copy_id.sh
-RUN chmod +x /usr/local/bin/copy_auth_files.sh /usr/local/bin/ssh_copy_id.sh
+    systemctl enable sshd && \
+    systemctl enable monitor-user && \
+    systemctl enable salt-master
 
 # Use systemd
 CMD ["/usr/sbin/init"]

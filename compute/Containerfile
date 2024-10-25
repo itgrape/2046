@@ -3,6 +3,7 @@ LABEL maintainer="pushihao@njust.edu.cn"
 
 ENV http_proxy='http://10.10.11.82:9500'
 ENV https_proxy='http://10.10.11.82:9500'
+RUN export https_proxy=http://10.10.11.82:9500 http_proxy=http://10.10.11.82:9500 all_proxy=socks5://10.10.11.82:9501
 
 # Base compute node
 RUN dnf install -y ohpc-base-compute ohpc-slurm-client lmod-ohpc && \
@@ -12,12 +13,7 @@ RUN dnf install -y ohpc-base-compute ohpc-slurm-client lmod-ohpc && \
     dnf install -y ohpc-gnu13-runtimes gnu13-compilers-ohpc && \ 
     dnf install -y openmpi5-pmix-gnu13-ohpc openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc && \
     dnf install -y spack-ohpc ohpc-gnu13-openmpi5-parallel-libs && \
-    dnf install -y ohpc-gnu13-python-libs ohpc-gnu13-runtimes && \
-    dnf install -y ipa-client
-
-# Install IPA-client
-COPY ipa-client-install.sh /usr/tmp/ipa-client-install.sh
-RUN chmod +x /usr/tmp/ipa-client-install.sh
+    dnf install -y ohpc-gnu13-python-libs ohpc-gnu13-runtimes
 
 # SSH configuration
 COPY sshd_config /etc/ssh/sshd_config

@@ -17,3 +17,4 @@ session    optional     pam_keyinit.so force revoke
 session    optional     pam_motd.so
 session    include      password-auth
 session    include      postlogin
+session    required     pam_mkhomedir.so skel=/etc/skel umask=077

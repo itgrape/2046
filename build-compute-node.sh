@@ -1,7 +1,9 @@
 #!/bin/bash
 
+CONTAINER=$(command -v podman || command -v docker)
+
 echo "=== build compute"
-docker build -t ohpc-container/compute -f compute/Containerfile compute
+$CONTAINER build -t ohpc-container/compute -f compute/Containerfile compute
 
 
-docker image prune -f
+$CONTAINER image prune -f

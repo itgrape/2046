@@ -1,16 +1,15 @@
 #!/bin/bash
 
-# user=${USER:-$USER}
-# arch=$(uname -m)
+CONTAINER=$(command -v podman || command -v docker)
+ARCH=$(uname -m)
 
-# set -e
-# echo "=== build openhpc"
-# docker build -t ohpc-container/openhpc:3 -f openhpc/Containerfile openhpc \
-#   --build-arg USER=$user \
-#   --build-arg ARCH=$arch
+set -e
+echo "=== build openhpc"
+$CONTAINER build -t ohpc-container/openhpc:3 -f openhpc/Containerfile openhpc \
+  --build-arg ARCH=$ARCH
 
-echo "=== build head"
-docker build -t ohpc-container/head -f head/Containerfile head
+# echo "=== build head"
+# $CONTAINER build -t ohpc-container/head -f head/Containerfile head
 
 
-docker image prune -f
+$CONTAINER image prune -f

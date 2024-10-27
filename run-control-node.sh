@@ -1,7 +1,9 @@
 #!/bin/bash
 
+CONTAINER=$(command -v podman || command -v docker)
+
 echo "=== Start MySQL container"
-docker run -d --rm \
+$CONTAINER run -d --rm \
     -e MYSQL_ROOT_PASSWORD=root \
     --net=host \
     --name=mysql --hostname=mysql \
@@ -9,7 +11,7 @@ docker run -d --rm \
 
 
 echo "=== Start head container"
-docker run -d --rm \
+$CONTAINER run -d --rm \
     --add-host=head.example.com:10.10.110.201 \
     --add-host=compute-0.example.com:10.10.110.202 \
     --add-host=compute-1.example.com:10.10.110.203 \
@@ -21,4 +23,4 @@ docker run -d --rm \
 
 
 # test
-docker exec -it head /bin/bash
+$CONTAINER exec -it head /bin/bash

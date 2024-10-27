@@ -6,32 +6,24 @@ ENV https_proxy='http://10.10.11.82:9500'
 RUN export https_proxy=http://10.10.11.82:9500 http_proxy=http://10.10.11.82:9500 all_proxy=socks5://10.10.11.82:9501
 
 # Base compute node
-RUN dnf install -y ohpc-base-compute ohpc-slurm-client lmod-ohpc && \
-    dnf install -y git patch file zstd bzip2 xz && \
-    dnf install -y python3 python3-pip && \
-    dnf install -y gcc-c++ gcc-gfortran && \
-    dnf install -y ohpc-gnu13-runtimes gnu13-compilers-ohpc && \ 
-    dnf install -y openmpi5-pmix-gnu13-ohpc openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc && \
-    dnf install -y spack-ohpc ohpc-gnu13-openmpi5-parallel-libs && \
-    dnf install -y ohpc-gnu13-python-libs ohpc-gnu13-runtimes
-
-# Install Salt
 RUN rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/SALT-PROJECT-GPG-PUBKEY-2023.pub && \
     curl -fsSL https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest.repo | sudo tee /etc/yum.repos.d/salt.repo && \
-    dnf install -y salt-minion
-RUN echo "master: head.example.com" >> /etc/salt/minion
+    dnf install -y ohpc-base-compute ohpc-slurm-client lmod-ohpc \
+                   git patch file zstd bzip2 xz python3 python3-pip gcc-c++ gcc-gfortran \
+                   ohpc-gnu13-runtimes gnu13-compilers-ohpc spack-ohpc ohpc-gnu13-openmpi5-parallel-libs \ 
+                   openmpi5-pmix-gnu13-ohpc openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
+                   ohpc-gnu13-python-libs ohpc-gnu13-runtimes \
+                   salt-minion && \
+    dnf clean all && \
+    echo "master: head.example.com" >> /etc/salt/minion
 
-# SSH configuration
+# Copy configuration
 COPY sshd_config /etc/ssh/sshd_config
+COPY pam.d/sshd pam.d/system-auth pam.d/password-auth /etc/pam.d/
 
-# Pam Slurm Adopt
-COPY pam.d/sshd /etc/pam.d/sshd
-COPY pam.d/system-auth /etc/pam.d/system-auth
-COPY pam.d/password-auth /etc/pam.d/password-auth
-RUN echo "root" > /etc/ssh/allowed_users_file && chmod 600 /etc/ssh/allowed_users_file
-
-# Set root password
-RUN echo 'root:root' | chpasswd
+# Allow root login && Set root password
+RUN echo "root" > /etc/ssh/allowed_users_file && chmod 600 /etc/ssh/allowed_users_file && \
+    echo 'root:root' | chpasswd
 
 # Run after run
 RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
@@ -43,23 +35,13 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
 RUN chown slurm:slurm /var/spool/clientmqueue/ && chmod 750 /var/spool/clientmqueue/
 
 # Prolog && Epilog
-COPY prolog.sh /etc/slurm/prolog.sh
-COPY epilog.sh /etc/slurm/epilog.sh
-COPY check_GPU.sh /etc/slurm/check_GPU.sh
+COPY prolog.sh epilog.sh check_GPU.sh /etc/slurm/
 RUN mkdir /var/log/slurm && \
-    chmod +x /etc/slurm/prolog.sh && \
-    chmod +x /etc/slurm/epilog.sh && \
-    chmod +x /etc/slurm/check_GPU.sh
-
-# Slurmd service need some extra parameter
-COPY slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
+    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/check_GPU.sh
 
 # Enable service
-RUN systemctl enable munge && \
-    systemctl enable slurmd && \
-    systemctl enable sshd && \
-    systemctl enable salt-minion && \
-    systemctl enable postfix
+COPY slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
+RUN systemctl enable munge slurmd sshd salt-minion postfix
 
 # Use systemd
 CMD ["/usr/sbin/init"]

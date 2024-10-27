@@ -6,16 +6,13 @@ ENV https_proxy='http://10.10.11.82:9500'
 RUN export https_proxy=http://10.10.11.82:9500 http_proxy=http://10.10.11.82:9500 all_proxy=socks5://10.10.11.82:9501
 
 # Base install
-RUN dnf install -y ohpc-slurm-server && \
-    dnf install -y inotify-tools
-
-# Install Salt
 RUN rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/SALT-PROJECT-GPG-PUBKEY-2023.pub && \
     curl -fsSL https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest.repo | sudo tee /etc/yum.repos.d/salt.repo && \
-    dnf install -y salt-master
+    dnf install -y ohpc-slurm-server inotify-tools salt-master && \
+    dnf clean all
 
 # Salt sync config
-RUN mkdir -p /srv/salt/auth_files && mkdir -p /var/log/slurm
+RUN mkdir -p /srv/salt/auth_files /var/log/slurm
 COPY sync_auth_files.sls /srv/salt/sync_auth_files.sls
 
 # Copy configuration
@@ -24,13 +21,15 @@ COPY slurmdbd.conf /etc/slurm/slurmdbd.conf
 COPY cgroup.conf /etc/slurm/cgroup.conf
 COPY sshd_config /etc/ssh/sshd_config
 COPY gres.conf /etc/slurm/gres.conf
+COPY monitor_user.sh /usr/local/bin/monitor_user.sh
 
 # File permissions
 RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf && \
     touch /var/log/slurmdbd.log && \
     touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && chmod 640 /var/log/slurmctld.log && \
     touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log && \
-    chown slurm:slurm /var/spool/clientmqueue/ && chmod 750 /var/spool/clientmqueue/
+    chown slurm:slurm /var/spool/clientmqueue/ && chmod 750 /var/spool/clientmqueue/ && \
+    chmod +x /usr/local/bin/monitor_user.sh
 
 # Set root password
 RUN echo 'root:root' | chpasswd
@@ -39,22 +38,10 @@ RUN echo 'root:root' | chpasswd
 RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
     chmod +x /etc/rc.local
 
-# Define service boot order
-COPY slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
-
-# Copy Script
-COPY monitor_user.sh /usr/local/bin/monitor_user.sh
-RUN chmod +x /usr/local/bin/monitor_user.sh
-
 # Enable service
+COPY slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
 COPY monitor-user.service /etc/systemd/system/monitor-user.service
-RUN systemctl enable munge && \
-    systemctl enable slurmdbd && \
-    systemctl enable slurmctld && \
-    systemctl enable sshd && \
-    systemctl enable monitor-user && \
-    systemctl enable salt-master && \
-    systemctl enable postfix
+RUN systemctl enable munge slurmdbd slurmctld sshd monitor-user salt-master postfix
 
 # Use systemd
 CMD ["/usr/sbin/init"]

@@ -28,7 +28,7 @@ RUN dnf install -y dnf-plugins-core && \
     dnf swap -y curl-minimal curl && \
     dnf install -y curl unzip jq procps-ng iproute bind-utils findutils && \
     dnf install -y ohpc-base && \
-    dnf install -y iputils vim rsync unzip git sendmail && \
+    dnf install -y iputils vim rsync unzip git sendmail postfix && \
     dnf install -y openssh-server
 
 # Munge service

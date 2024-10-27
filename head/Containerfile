@@ -29,7 +29,8 @@ COPY gres.conf /etc/slurm/gres.conf
 RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf && \
     touch /var/log/slurmdbd.log && \
     touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && chmod 640 /var/log/slurmctld.log && \
-    touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log
+    touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log && \
+    chown slurm:slurm /var/spool/clientmqueue/ && chmod 750 /var/spool/clientmqueue/
 
 # Set root password
 RUN echo 'root:root' | chpasswd
@@ -52,7 +53,8 @@ RUN systemctl enable munge && \
     systemctl enable slurmctld && \
     systemctl enable sshd && \
     systemctl enable monitor-user && \
-    systemctl enable salt-master
+    systemctl enable salt-master && \
+    systemctl enable postfix
 
 # Use systemd
 CMD ["/usr/sbin/init"]

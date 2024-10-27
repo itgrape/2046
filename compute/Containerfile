@@ -39,6 +39,9 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
     echo "chmod -R u+w /sys/fs/cgroup" >> /etc/rc.local && \
     chmod +x /etc/rc.local
 
+# Send mail
+RUN chown slurm:slurm /var/spool/clientmqueue/ && chmod 750 /var/spool/clientmqueue/
+
 # Prolog && Epilog
 COPY prolog.sh /etc/slurm/prolog.sh
 COPY epilog.sh /etc/slurm/epilog.sh
@@ -55,7 +58,8 @@ COPY slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
 RUN systemctl enable munge && \
     systemctl enable slurmd && \
     systemctl enable sshd && \
-    systemctl enable salt-minion
+    systemctl enable salt-minion && \
+    systemctl enable postfix
 
 # Use systemd
 CMD ["/usr/sbin/init"]

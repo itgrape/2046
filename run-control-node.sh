@@ -14,7 +14,7 @@ docker run -d --rm \
     --add-host=compute-0.example.com:10.10.110.202 \
     --add-host=compute-1.example.com:10.10.110.203 \
     --add-host=compute-2.example.com:10.10.110.41 \
-    --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup \
+    --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
     --net=host \
     --name=head --hostname=head.example.com \
     ohpc-container/head

@@ -5,8 +5,8 @@ ENV http_proxy='http://10.10.11.82:9500'
 ENV https_proxy='http://10.10.11.82:9500'
 
 # Use systemd and delete unnecessary package
-RUN yum -y install systemd systemd-libs && \
-    yum clean all && \
+RUN dnf -y install systemd systemd-libs && \
+    dnf clean all && \
     (cd /lib/systemd/system/sysinit.target.wants/; \
         for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done) && \
     rm -f /lib/systemd/system/multi-user.target.wants/* && \
@@ -29,6 +29,6 @@ RUN dnf install -y dnf-plugins-core && \
     dnf swap -y curl-minimal curl && \
     dnf install -y curl unzip jq procps-ng iproute bind-utils findutils ohpc-base \
         iputils vim rsync unzip git sendmail postfix openssh-server munge && \
-        dnf clean all && \
-        /usr/sbin/create-munge-key && \
-        ssh-keygen -A
+    dnf clean all && \
+    /usr/sbin/create-munge-key && \
+    ssh-keygen -A

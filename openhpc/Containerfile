@@ -4,8 +4,18 @@ LABEL maintainer="pushihao@njust.edu.cn"
 ENV http_proxy='http://10.10.11.82:9500'
 ENV https_proxy='http://10.10.11.82:9500'
 
-# Use systemd and delete unnecessary package
-RUN dnf -y install systemd systemd-libs && \
+
+# Base install
+ARG ARCH=x86_64
+
+RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-release-3-1.el9.$ARCH.rpm && \
+    dnf install -y dnf-plugins-core && \
+    dnf config-manager --set-enabled crb && \
+    dnf upgrade -y && \
+    dnf swap -y curl-minimal curl && \
+    dnf install -y curl unzip jq procps-ng iproute bind-utils findutils ohpc-base \
+        iputils vim rsync unzip git sendmail postfix openssh-server munge && \
+    dnf -y install systemd systemd-libs && \
     dnf clean all && \
     (cd /lib/systemd/system/sysinit.target.wants/; \
         for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done) && \
@@ -15,20 +25,6 @@ RUN dnf -y install systemd systemd-libs && \
     rm -f /lib/systemd/system/sockets.target.wants/*udev* && \
     rm -f /lib/systemd/system/sockets.target.wants/*initctl* && \
     rm -f /lib/systemd/system/basic.target.wants/* && \
-    rm -f /lib/systemd/system/anaconda.target.wants/*
-
-# Base install
-ARG ARCH=x86_64
-RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-release-3-1.el9.$ARCH.rpm && \
-    dnf clean all
-
-# Base tools
-RUN dnf install -y dnf-plugins-core && \
-    dnf config-manager --set-enabled crb && \
-    dnf upgrade -y && \
-    dnf swap -y curl-minimal curl && \
-    dnf install -y curl unzip jq procps-ng iproute bind-utils findutils ohpc-base \
-        iputils vim rsync unzip git sendmail postfix openssh-server munge && \
-    dnf clean all && \
+    rm -f /lib/systemd/system/anaconda.target.wants/* && \
     /usr/sbin/create-munge-key && \
     ssh-keygen -A

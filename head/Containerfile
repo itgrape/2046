@@ -16,12 +16,9 @@ RUN mkdir -p /srv/salt/auth_files /var/log/slurm
 COPY sync_auth_files.sls /srv/salt/sync_auth_files.sls
 
 # Copy configuration
-COPY slurm.conf /etc/slurm/slurm.conf
-COPY slurmdbd.conf /etc/slurm/slurmdbd.conf
-COPY cgroup.conf /etc/slurm/cgroup.conf
+COPY slurm.conf slurmdbd.conf cgroup.conf gres.conf /etc/slurm/
 COPY sshd_config /etc/ssh/sshd_config
-COPY gres.conf /etc/slurm/gres.conf
-COPY monitor_user.sh /usr/local/bin/monitor_user.sh
+COPY monitor_user.sh mail_wrapper.sh /usr/local/bin/
 
 # File permissions
 RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf && \
@@ -29,7 +26,8 @@ RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.
     touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && chmod 640 /var/log/slurmctld.log && \
     touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log && \
     chown slurm:slurm /var/spool/clientmqueue/ && chmod 750 /var/spool/clientmqueue/ && \
-    chmod +x /usr/local/bin/monitor_user.sh
+    touch /var/log/slurm/sendmail.log && \
+    chmod +x /usr/local/bin/monitor_user.sh /usr/local/bin/mail_wrapper.sh
 
 # Set root password
 RUN echo 'root:root' | chpasswd
@@ -37,6 +35,8 @@ RUN echo 'root:root' | chpasswd
 # Delete nologin file
 RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
     chmod +x /etc/rc.local
+
+RUN sudo chown slurm:mail /var/spool/clientmqueue/ && sudo chown slurm:smmsp /var/spool/clientmqueue/ && chmod 770 /var/spool/clientmqueue/
 
 # Enable service
 COPY slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf

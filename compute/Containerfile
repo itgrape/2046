@@ -8,11 +8,15 @@ RUN export https_proxy=http://10.10.11.82:9500 http_proxy=http://10.10.11.82:950
 # Base compute node
 RUN rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/SALT-PROJECT-GPG-PUBKEY-2023.pub && \
     curl -fsSL https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest.repo | sudo tee /etc/yum.repos.d/salt.repo && \
-    dnf install -y ohpc-base-compute ohpc-slurm-client lmod-ohpc \
-                   git patch file zstd bzip2 xz python3 python3-pip gcc-c++ gcc-gfortran \
-                   ohpc-gnu13-runtimes gnu13-compilers-ohpc spack-ohpc ohpc-gnu13-openmpi5-parallel-libs \ 
-                   openmpi5-pmix-gnu13-ohpc openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
-                   ohpc-gnu13-python-libs ohpc-gnu13-runtimes \
+    dnf install -y ohpc-base-compute ohpc-slurm-client \
+                   lmod-ohpc \
+                   ohpc-autotools EasyBuild-ohpc hwloc-ohpc spack-ohpc valgrind-ohpc \
+                   lmod-defaults-gnu13-openmpi5-ohpc \
+                   ohpc-gnu13-runtimes gnu13-compilers-ohpc ohpc-gnu13-perf-tools \ 
+                   ohpc-gnu13-openmpi5-parallel-libs openmpi5-pmix-gnu13-ohpc \
+                   openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
+                   ohpc-gnu13-python-libs \
+                   patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran \
                    salt-minion && \
     dnf clean all && \
     echo "master: head.example.com" >> /etc/salt/minion

@@ -1,30 +1,29 @@
 #!/bin/bash
 
-# 自定义值
-GPU_THRESHOLD=20     # 设置GPU平均使用率阈值百分比，低于此值将释放作业
-CHECK_INTERVAL=60    # GPU监控间隔时间（单位：秒）
-MAX_HISTORY_SIZE=12  # 保存最近多少次的GPU使用率
-
 exec >> /var/log/slurm/check_GPU.log 2>&1
+
+GPU_UTILIZATION_THRESHOLD=20   # 设置GPU平均使用率阈值百分比，低于此值将释放作业
+GPU_MEMORY_THRESHOLD=20        # 设置GPU平均内存使用率阈值百分比，低于此值将释放作业
+CHECK_INTERVAL=60              # GPU监控间隔时间（单位：秒）
+MAX_HISTORY_SIZE=12            # 求最近多少次监控的平均值
 
 JOB_ID=$SLURM_JOB_ID
 USER_ID=$SLURM_JOB_USER
 
-echo "Prolog script started for job $JOB_ID by user $USER_ID"
-
-# 检查作业是否分配了GPU，没有分配GPU直接退出该脚本
 if [[ -z $SLURM_JOB_GPUS ]]; then
   echo "No GPU allocated for job $JOB_ID. Exiting."
   exit 0
 fi
 
-# 获取分配的GPU
+echo "Check GPU script started for job $JOB_ID by user $USER_ID"
+
+
 ALLOCATED_GPUS=$(echo $SLURM_JOB_GPUS | tr ',' ' ')
 
-# 保存最近MAX_HISTORY_SIZE次的GPU使用率
 GPU_UTIL_HISTORY=()
+GPU_MEM_HISTORY=()
 
-# 计算最近的GPU使用率平均值
+
 calculate_average_utilization() {
   local sum=0
   local count=${#GPU_UTIL_HISTORY[@]}
@@ -40,37 +39,57 @@ calculate_average_utilization() {
     echo 0
   fi
 }
+calculate_average_memory() {
+  local sum=0
+  local count=${#GPU_MEM_HISTORY[@]}
+  
+  for mem in "${GPU_MEM_HISTORY[@]}"; do
+    sum=$(($sum + $mem))
+  done
 
-# 持续监控GPU使用率
+  if [ $count -gt 0 ]; then
+    echo $(($sum / $count))
+  else
+    echo 0
+  fi
+}
+
+
 while true; do
-  # 获取所有分配GPU的使用率
   GPU_UTILIZATION=0
+  GPU_MEMORY=0
   for GPU in $ALLOCATED_GPUS; do
     UTIL=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits -i $GPU | xargs)
     GPU_UTILIZATION=$(($GPU_UTILIZATION + $UTIL))
+    MEM=$(nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits -i $GPU | awk '{print ($1/$2)*100}' | xargs)
+    GPU_MEMORY=$(($GPU_MEMORY + ${MEM%.*}))
   done
 
-  # 计算当前的平均使用率
   AVG_GPU_UTILIZATION=$(($GPU_UTILIZATION / $(echo $ALLOCATED_GPUS | wc -w)))
+  AVG_GPU_MEMORY=$(($GPU_MEMORY / $(echo $ALLOCATED_GPUS | wc -w)))
 
-  # 记录最近的GPU使用率
   GPU_UTIL_HISTORY+=($AVG_GPU_UTILIZATION)
+  GPU_MEM_HISTORY+=($AVG_GPU_MEMORY)
   if [ ${#GPU_UTIL_HISTORY[@]} -gt $MAX_HISTORY_SIZE ]; then
-    GPU_UTIL_HISTORY=("${GPU_UTIL_HISTORY[@]:1}")  # 切片操作移除最早的一次记录，保持记录的总数为MAX_HISTORY_SIZE
+    GPU_UTIL_HISTORY=("${GPU_UTIL_HISTORY[@]:1}")
+  fi
+  if [ ${#GPU_MEM_HISTORY[@]} -gt $MAX_HISTORY_SIZE ]; then
+    GPU_MEM_HISTORY=("${GPU_MEM_HISTORY[@]:1}")
   fi
 
   # 如果记录不足MAX_HISTORY_SIZE次，则等待
   if [ ${#GPU_UTIL_HISTORY[@]} -lt $MAX_HISTORY_SIZE ]; then
-    echo "Job $JOB_ID by user $USER_ID, not enough data for checking yet. Current GPU usage: $AVG_GPU_UTILIZATION%"
+    echo "Job $JOB_ID by user $USER_ID, not enough data for checking yet. Current GPU usage: $AVG_GPU_UTILIZATION%, Current GPU memory usage: $AVG_GPU_MEMORY%"
   else
-    # 计算最近MAX_HISTORY_SIZE次的GPU使用率平均值
-    RECENT_AVG_UTILIZATION=$(calculate_average_utilization)
 
-    echo "Job $JOB_ID by user $USER_ID, Current GPU usage: $AVG_GPU_UTILIZATION%, Recent Average GPU: $RECENT_AVG_UTILIZATION%"
+    RECENT_AVG_UTILIZATION=$(calculate_average_utilization)
+    RECENT_AVG_MEMORY=$(calculate_average_memory)
+
+    echo "Job $JOB_ID by user $USER_ID, Current GPU usage: $AVG_GPU_UTILIZATION%, Recent Average GPU usage: $RECENT_AVG_UTILIZATION% , Current GPU memory usage: $AVG_GPU_MEMORY%, Recent Average GPU memory usage: $RECENT_AVG_MEMORY%"
 
     # 检查最近MAX_HISTORY_SIZE次的平均使用率是否低于阈值
-    if (( $RECENT_AVG_UTILIZATION < $GPU_THRESHOLD )); then
-      echo "Recent average GPU usage is below $GPU_THRESHOLD% for job $JOB_ID. Releasing the job."
+    if (( $RECENT_AVG_UTILIZATION < $GPU_UTILIZATION_THRESHOLD )) || (( $RECENT_AVG_MEMORY < $GPU_MEMORY_THRESHOLD )); then
+      echo "Recent average GPU usage is too low for job $JOB_ID. Releasing the job."
       scancel $JOB_ID
       exit 0
     fi

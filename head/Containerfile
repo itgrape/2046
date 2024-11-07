@@ -6,8 +6,7 @@ ENV https_proxy='http://10.10.11.82:9500'
 RUN export https_proxy=http://10.10.11.82:9500 http_proxy=http://10.10.11.82:9500 all_proxy=socks5://10.10.11.82:9501
 
 # Base install
-RUN rpm --import https://repo.saltproject.io/salt/py3/redhat/9/x86_64/SALT-PROJECT-GPG-PUBKEY-2023.pub && \
-    curl -fsSL https://repo.saltproject.io/salt/py3/redhat/9/x86_64/latest.repo | sudo tee /etc/yum.repos.d/salt.repo && \
+RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | sudo tee /etc/yum.repos.d/salt.repo && \
     dnf install -y ohpc-slurm-server \
                    inotify-tools salt-master && \
     dnf clean all

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONTAINER=$(command -v podman || command -v docker)
+CONTAINER=podman
 ARCH=$(uname -m)
 
 set -e

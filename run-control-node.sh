@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONTAINER=$(command -v podman || command -v docker)
+CONTAINER=podman
 
 echo "=== Start MySQL container"
 $CONTAINER run -d --rm \

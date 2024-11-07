@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CONTAINER=$(command -v podman || command -v docker)
+CONTAINER=podman
 
 # Which node
 read -p "Please enter compute node order: " order
@@ -12,9 +12,9 @@ $CONTAINER run -d --rm \
     --add-host=compute-1.example.com:10.10.110.203 \
     --add-host=compute-2.example.com:10.10.110.41 \
     --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-    --net=host \
+    --network=host \
     --name=compute-$order --hostname=compute-$order.example.com \
-    --gpus all \
+    --device nvidia.com/gpu=all \
     ohpc-container/compute
 
 # test

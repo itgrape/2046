@@ -20,6 +20,7 @@ $CONTAINER run -d --rm \
     --net=host \
     --name=head --hostname=head.example.com \
     ohpc-container/head
+$CONTAINER cp /root/auth_files head:/srv/salt/recover
 
 
 # test

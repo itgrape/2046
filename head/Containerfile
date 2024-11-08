@@ -12,8 +12,12 @@ RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/d
     dnf clean all
 
 # Salt sync config
-RUN mkdir -p /srv/salt/auth_files /var/log/slurm
+RUN mkdir -p /srv/salt/auth_files /var/log/slurm && \
+    echo "auto_accept: True" >> /etc/salt/master
 COPY sync_auth_files.sls /srv/salt/sync_auth_files.sls
+
+# Recover auth_files
+COPY recover_auth_files.sh /usr/local/bin
 
 # Copy configuration
 COPY slurm.conf slurmdbd.conf cgroup.conf gres.conf /etc/slurm/
@@ -27,7 +31,7 @@ RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.
     touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log && \
     chown slurm:slurm /var/spool/clientmqueue/ && chmod 750 /var/spool/clientmqueue/ && \
     touch /var/log/slurm/sendmail.log && \
-    chmod +x /usr/local/bin/monitor_user.sh /usr/local/bin/mail_wrapper.sh
+    chmod +x /usr/local/bin/monitor_user.sh /usr/local/bin/mail_wrapper.sh /usr/local/bin/recover_auth_files.sh
 
 # Set root password
 RUN echo 'root:root' | chpasswd
@@ -36,7 +40,7 @@ RUN echo 'root:root' | chpasswd
 RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
     chmod +x /etc/rc.local
 
-RUN sudo chown slurm:mail /var/spool/clientmqueue/ && sudo chown slurm:smmsp /var/spool/clientmqueue/ && chmod 770 /var/spool/clientmqueue/
+RUN chown slurm:mail /var/spool/clientmqueue/ && chown slurm:smmsp /var/spool/clientmqueue/ && chmod 770 /var/spool/clientmqueue/
 
 # Enable service
 COPY slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf

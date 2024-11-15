@@ -1,11 +1,12 @@
-# 在Docker容器中运行Slurm
+# 在容器中运行Slurm集群
 
 安装docker：https://docs.docker.com/engine/install/rhel/
 
-集群共有一个head节点和数个compute节点，相关容器有：
+安装podman：https://podman.io/docs/installation
+
+集群共有一个control节点和数个compute节点，相关容器有：
 
 - MySQL容器，数据存储
-- IPA容器，权限认证
 - Head容器，Slurm控制节点
 - Compute容器，Slurm计算节点
 
@@ -54,19 +55,40 @@ sudo firewall-cmd --reload
 
 由于dockerfile中无法直接修改/etc/host文件，所以应在docker run命令时使用--add-host添加。需根据实际情况修改run-xxx-node.sh中的相应部分
 
+## 配置podman访问GPU
+
+https://podman-desktop.io/docs/podman/gpu
+
+podman并不像docker集成了对gpu的支持，如果想在podman容器中使用GPU，需要借助nvidia-container-toolkit，具体步骤如下（在宿主机执行）
+
+安装nvidia-container-toolkit
+
+```bash
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+
+sudo dnf clean expire-cache
+sudo dnf install -y nvidia-container-toolkit
+```
+
+生成CDI文件
+
+```bash
+nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+nvidia-ctk cdi list   # Check
+```
+
 ## 打包运行
 
 ```bash
 # head
 ./build-control-node.sh
 ./run-control-node.sh
-docker exec -it ipa /usr/tmp/ipa-server-install.sh
-docker exec -it head /usr/tmp/ipa-client-install.sh
 
 # compute
 ./build-compute-node.sh
 ./run-compute-node.sh
-docker exec -it compute-x /usr/tmp/ipa-client-install.sh
 ```
 
 ## 测试任务脚本
@@ -79,6 +101,8 @@ docker exec -it compute-x /usr/tmp/ipa-client-install.sh
 #SBATCH --ntasks=1
 #SBATCH --time=00:01:00
 #SBATCH --partition=normal
+#SBATCH --mail-user=your_email@example.com
+#SBATCH --mail-type=BEGIN,END,FAIL
 
 echo "Test job running"
 sleep 30
@@ -86,22 +110,6 @@ echo "Test job finished"
 ```
 
 ## 常用命令
-
-ipa用户管理相关（管理员）
-
-```bash
-#初始化
-kinit admin
-
-#添加新用户
-ipa user-add <username> --first=<first> --last=<last> --password
-
-#修改用户密码
-ipa passwd <username>
-
-#删除用户
-ipa user-del <username>
-```
 
 sacctmgr资源限制相关（管理员）
 

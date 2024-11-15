@@ -7,6 +7,7 @@ $CONTAINER run -d --rm \
     -e MYSQL_ROOT_PASSWORD=root \
     --net=host \
     --name=mysql --hostname=mysql \
+    -v /root/mysql_data:/var/lib/mysql \
     mysql
 
 

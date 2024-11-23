@@ -26,16 +26,16 @@ jobs:
 
     - name: Save Control Node Image as Tar
       run: |
-        docker save -o head.tar ohpc-container/head
+        podman save -o head.tar localhost/ohpc-container/head
 
     - name: Save Compute Node Image as Tar
       run: |
-        docker save -o compute.tar ohpc-container/compute
+        podman save -o compute.tar localhost/ohpc-container/compute
 
-    - name: Upload Docker Image Tar Files
+    - name: Upload Container Image Tar Files
       uses: actions/upload-artifact@v3
       with:
-        name: docker-images
+        name: container-images
         path: |
-          control-node-image.tar
-          compute-node-image.tar
+          head.tar
+          compute.tar

@@ -1,12 +1,8 @@
 FROM ohpc-container/openhpc:3
 LABEL maintainer="pushihao@njust.edu.cn"
 
-ENV http_proxy='http://10.10.11.82:9500'
-ENV https_proxy='http://10.10.11.82:9500'
-RUN export https_proxy=http://10.10.11.82:9500 http_proxy=http://10.10.11.82:9500 all_proxy=socks5://10.10.11.82:9501
-
 # Base compute node
-RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | sudo tee /etc/yum.repos.d/salt.repo && \
+RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | tee /etc/yum.repos.d/salt.repo && \
     dnf install -y ohpc-base-compute ohpc-slurm-client \
                    lmod-ohpc \
                    ohpc-autotools EasyBuild-ohpc hwloc-ohpc spack-ohpc valgrind-ohpc \

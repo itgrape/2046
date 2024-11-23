@@ -4,16 +4,42 @@
 
 安装podman：https://podman.io/docs/installation
 
-集群共有一个control节点和数个compute节点，相关容器有：
+## 介绍
+
+集群共有一个 control(控制) 节点 和数个 compute(计算) 节点，相关容器有
 
 - MySQL容器，数据存储
 - Head容器，Slurm控制节点
 - Compute容器，Slurm计算节点
 
-## 开放主机端口
+## 制作镜像
+
+### 一、修改配置文件
+
+1. run-control-node.sh 和 run-compute-node.sh 中按需增删 `--add-host=hostname:ip \` 用于配置ip与主机名的映射
+2. head/gres.conf 中按需修改 GPU 参数信息
+3. head/slurm.conf 中按需修改以下配置项
+   - NodeName
+   - PartitionName
+4. compute/check_GPU.sh 中 5~8 行按需修改监控信息
+5. compute/slurmd_override.conf 中按需修改 `ExecStart=/usr/sbin/slurmd --conf-server head-hostname:6817` 用于计算节点的无配置模式
+
+### 二、制作镜像
+
+运行如下命令
+
+```
+sudo ./build-control-node.sh
+sudo ./build-compute-node.sh
+```
+
+## 部署运行
+
+### 一、开放主机端口
+
+1. 在 control 节点执行如下命令
 
 ```bash
-# head
 sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=9100/tcp --permanent
@@ -40,8 +66,11 @@ sudo firewall-cmd --zone=public --add-port=464/udp --permanent
 sudo firewall-cmd --zone=public --add-port=53/udp --permanent
 sudo firewall-cmd --zone=public --add-port=123/udp --permanent
 sudo firewall-cmd --reload
+```
 
-# compute
+2. 在 compute 节点执行如下命令
+
+```
 sudo firewall-cmd --zone=public --add-port=2377/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=7946/tcp --permanent
 sudo firewall-cmd --zone=public --add-port=6818/tcp --permanent
@@ -51,17 +80,15 @@ sudo firewall-cmd --zone=public --add-port=4789/udp --permanent
 sudo firewall-cmd --reload
 ```
 
-## 配置Hosts
+### 二、配置podman访问GPU
 
-由于dockerfile中无法直接修改/etc/host文件，所以应在docker run命令时使用--add-host添加。需根据实际情况修改run-xxx-node.sh中的相应部分
-
-## 配置podman访问GPU
+> 以下操作只在 compute 节点执行
 
 https://podman-desktop.io/docs/podman/gpu
 
 podman并不像docker集成了对gpu的支持，如果想在podman容器中使用GPU，需要借助nvidia-container-toolkit，具体步骤如下（在宿主机执行）
 
-安装nvidia-container-toolkit
+1. 安装nvidia-container-toolkit
 
 ```bash
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
@@ -72,26 +99,32 @@ sudo dnf clean expire-cache
 sudo dnf install -y nvidia-container-toolkit
 ```
 
-生成CDI文件
+2. 生成CDI文件
 
 ```bash
 nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
 nvidia-ctk cdi list   # Check
 ```
 
-## 打包运行
+### 三、部署
 
-```bash
-# head
-./build-control-node.sh
-./run-control-node.sh
+1. 运行 control 节点
 
-# compute
-./build-compute-node.sh
-./run-compute-node.sh
+```
+sudo ./run-control-node.sh
 ```
 
-## 测试任务脚本
+2. run-compute-node.sh 中按需修改 `--device nvidia.com/gpu=all \` 用于控制容器对 GPU 的访问
+
+3. 运行 compute 节点
+
+```
+sudo ./run-compute-node.sh
+```
+
+## 测试
+
+### 一、测试任务脚本
 
 ```bash
 #!/bin/bash
@@ -107,6 +140,12 @@ nvidia-ctk cdi list   # Check
 echo "Test job running"
 sleep 30
 echo "Test job finished"
+```
+
+### 二、测试调试任务
+
+```
+salloc
 ```
 
 ## 常用命令
@@ -131,15 +170,5 @@ sacctmgr add qos <qosname> MaxJobs=1 ...
 
 #关联qos到用户或者账户
 sacctmgr modify user name=<username> set qos=<qosname>
-```
-
-申请资源（普通用户）
-
-```bash
-#提交批处理任务
-sbatch xxx.sh
-
-#申请交互式窗口
-salloc (--no-shell)
 ```
 

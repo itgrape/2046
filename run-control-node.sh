@@ -5,7 +5,7 @@ CONTAINER=podman
 echo "=== Start MySQL container"
 $CONTAINER run -d --rm \
     -e MYSQL_ROOT_PASSWORD=root \
-    --net=host \
+    --network=host \
     --name=mysql --hostname=mysql \
     -v /root/mysql_data:/var/lib/mysql \
     mysql
@@ -13,12 +13,14 @@ $CONTAINER run -d --rm \
 
 echo "=== Start head container"
 $CONTAINER run -d --rm \
-    --add-host=head.example.com:10.10.110.201 \
-    --add-host=compute-0.example.com:10.10.110.202 \
-    --add-host=compute-1.example.com:10.10.110.203 \
-    --add-host=compute-2.example.com:10.10.110.41 \
+    --add-host=head:10.20.20.1 \
+    --add-host=compute-5:10.20.11.80 \
+    --add-host=compute-4:10.20.11.81 \
+    --add-host=compute-3:10.20.11.82 \
+    --add-host=compute-2:10.20.11.83 \
+    --add-host=compute-1:10.20.11.84 \
     --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-    --net=host \
+    --network=host \
     --name=head --hostname=head.example.com \
     ohpc-container/head
 $CONTAINER cp /root/auth_files head:/srv/salt/recover

@@ -1,10 +1,6 @@
 FROM registry.docker.com/library/rockylinux:9
 LABEL maintainer="pushihao@njust.edu.cn"
 
-ENV http_proxy='http://10.10.11.82:9500'
-ENV https_proxy='http://10.10.11.82:9500'
-
-
 # Base install
 ARG ARCH=x86_64
 
@@ -17,8 +13,7 @@ RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-rele
         iputils vim rsync unzip git sendmail postfix openssh-server munge && \
     dnf -y install systemd systemd-libs && \
     dnf clean all && \
-    (cd /lib/systemd/system/sysinit.target.wants/; \
-        for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done) && \
+    (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done) && \
     rm -f /lib/systemd/system/multi-user.target.wants/* && \
     rm -f /etc/systemd/system/*.wants/* && \
     rm -f /lib/systemd/system/local-fs.target.wants/* && \

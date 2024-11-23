@@ -21,7 +21,7 @@ $CONTAINER run -d --rm \
     --add-host=compute-1:10.20.11.84 \
     --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
     --network=host \
-    --name=head --hostname=head.example.com \
+    --name=head --hostname=head \
     ohpc-container/head
 $CONTAINER cp /root/auth_files head:/srv/salt/recover
 

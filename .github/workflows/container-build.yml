@@ -1,0 +1,41 @@
+name: Build Container
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Make scripts executable
+      run: |
+        chmod +x build-control-node.sh
+        chmod +x build-compute-node.sh
+
+    - name: Build Control Node Image
+      run: |
+        ./build-control-node.sh
+
+    - name: Build Compute Node Image
+      run: |
+        ./build-compute-node.sh
+
+    - name: Save Control Node Image as Tar
+      run: |
+        docker save -o head.tar ohpc-container/head
+
+    - name: Save Compute Node Image as Tar
+      run: |
+        docker save -o compute.tar ohpc-container/compute
+
+    - name: Upload Docker Image Tar Files
+      uses: actions/upload-artifact@v3
+      with:
+        name: docker-images
+        path: |
+          control-node-image.tar
+          compute-node-image.tar

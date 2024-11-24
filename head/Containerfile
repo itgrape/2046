@@ -10,15 +10,17 @@ RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/d
 # Salt sync config
 RUN mkdir -p /srv/salt/auth_files /var/log/slurm && \
     echo "auto_accept: True" >> /etc/salt/master
-COPY sync_auth_files.sls /srv/salt/sync_auth_files.sls
-
-# Recover auth_files
-COPY recover_auth_files.sh /usr/local/bin
+COPY salt_config/sync_auth_files.sls /srv/salt/sync_auth_files.sls
 
 # Copy configuration
-COPY slurm.conf slurmdbd.conf cgroup.conf gres.conf /etc/slurm/
-COPY sshd_config /etc/ssh/sshd_config
-COPY monitor_user.sh mail_wrapper.sh /usr/local/bin/
+COPY slurm_config/cgroup.conf /etc/slurm/cgroup.conf
+COPY slurm_config/slurm.conf /etc/slurm/slurm.conf
+COPY slurm_config/slurmdbd.conf /etc/slurm/slurmdbd.conf
+COPY slurm_config/gpu_info.conf /etc/slurm/gres.conf
+COPY custom_script/mail_wrapper.sh /usr/local/bin/mail_wrapper.sh
+COPY custom_script/monitor_user.sh /usr/local/bin/monitor_user.sh
+COPY custom_script/recover_auth_files.sh /usr/local/bin/recover_auth_files.sh
+COPY ssh_config/sshd_config /etc/ssh/sshd_config
 
 # File permissions
 RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf && \
@@ -36,11 +38,12 @@ RUN echo 'root:root' | chpasswd
 RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
     chmod +x /etc/rc.local
 
+# Mail config
 RUN chown slurm:mail /var/spool/clientmqueue/ && chown slurm:smmsp /var/spool/clientmqueue/ && chmod 770 /var/spool/clientmqueue/
 
 # Enable service
-COPY slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
-COPY monitor-user.service /etc/systemd/system/monitor-user.service
+COPY systemd_config/slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
+COPY systemd_config/monitor_user.service /etc/systemd/system/monitor-user.service
 RUN systemctl enable munge slurmdbd slurmctld sshd monitor-user salt-master postfix
 
 # Use systemd

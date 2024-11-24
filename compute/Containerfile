@@ -17,8 +17,15 @@ RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/d
     echo "master: head" >> /etc/salt/minion
 
 # Copy configuration
-COPY sshd_config /etc/ssh/sshd_config
+COPY ssh_config/sshd_config /etc/ssh/sshd_config
 COPY pam.d/sshd pam.d/system-auth pam.d/password-auth /etc/pam.d/
+COPY custom_script/check_GPU.sh /etc/slurm/check_GPU.sh
+COPY custom_script/user_task_end.sh /etc/slurm/epilog.sh
+COPY custom_script/user_task_begin.sh /etc/slurm/prolog.sh
+
+# Script
+RUN mkdir /var/log/slurm && \
+    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/check_GPU.sh
 
 # Allow root login && Set root password
 RUN echo "root" > /etc/ssh/allowed_users_file && chmod 600 /etc/ssh/allowed_users_file && \
@@ -30,13 +37,8 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
     echo "chmod -R u+w /sys/fs/cgroup" >> /etc/rc.local && \
     chmod +x /etc/rc.local
 
-# Prolog && Epilog
-COPY prolog.sh epilog.sh check_GPU.sh /etc/slurm/
-RUN mkdir /var/log/slurm && \
-    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/check_GPU.sh
-
 # Enable service
-COPY slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
+COPY systemd_config/slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
 RUN systemctl enable munge dbus.socket slurmd sshd salt-minion
 
 # Use systemd

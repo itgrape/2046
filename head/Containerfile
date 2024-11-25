@@ -43,6 +43,7 @@ RUN chown slurm:mail /var/spool/clientmqueue/ && chown slurm:smmsp /var/spool/cl
 
 # Enable service
 COPY systemd_config/slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
+COPY systemd_config/slurmdbd_override.conf /etc/systemd/system/slurmdbd.service.d/override.conf
 COPY systemd_config/monitor_user.service /etc/systemd/system/monitor-user.service
 RUN systemctl enable munge slurmdbd slurmctld sshd monitor-user salt-master postfix
 

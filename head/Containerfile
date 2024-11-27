@@ -30,6 +30,7 @@ RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.
     touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log && \
     chown slurm:slurm /var/spool/clientmqueue/ && chmod 750 /var/spool/clientmqueue/ && \
     touch /var/log/slurm/sendmail.log && \
+    mkdir /auth_files && \
     chmod +x /usr/local/bin/monitor_user.sh /usr/local/bin/mail_wrapper.sh /usr/local/bin/user_import.sh /usr/local/bin/user_export.sh
 
 # Set root password

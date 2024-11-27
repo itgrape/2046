@@ -33,6 +33,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_ALI_USERNAME }}
           password: ${{ secrets.DOCKER_ALI_PASSWORD }}
+          registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
 
       - name: Build and push OpenHPC container image
         uses: docker/build-push-action@v6.10.0
@@ -58,6 +59,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_ALI_USERNAME }}
           password: ${{ secrets.DOCKER_ALI_PASSWORD }}
+          registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
 
       - name: Build and push head container image
         uses: docker/build-push-action@v6.10.0
@@ -83,6 +85,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_ALI_USERNAME }}
           password: ${{ secrets.DOCKER_ALI_PASSWORD }}
+          registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
 
       - name: Build and push compute container image
         uses: docker/build-push-action@v6.10.0

@@ -1,4 +1,4 @@
-FROM ohpc-container/openhpc:3
+FROM pushihao/ohpc:base
 LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base install

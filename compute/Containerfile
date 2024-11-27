@@ -1,4 +1,4 @@
-FROM pushihao/ohpc:base
+FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:base
 LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base compute node

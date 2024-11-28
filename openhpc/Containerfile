@@ -10,7 +10,7 @@ RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-rele
     dnf upgrade -y && \
     dnf swap -y curl-minimal curl && \
     dnf install -y curl unzip jq procps-ng iproute bind-utils findutils ohpc-base \
-        iputils vim rsync unzip git sendmail postfix openssh-server munge && \
+        iputils vim rsync unzip git sendmail postfix openssh-server munge tmux screen && \
     dnf -y install systemd systemd-libs && \
     dnf clean all && \
     (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done) && \

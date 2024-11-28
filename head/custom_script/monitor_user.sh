@@ -10,4 +10,6 @@ inotifywait -m -e modify,open,access,close_write,attrib,move,create,delete,close
     cp /etc/passwd /etc/shadow /etc/group /etc/gshadow /etc/login.defs /srv/salt/auth_files
     chmod 644 /srv/salt/auth_files/shadow /srv/salt/auth_files/gshadow
     salt '*' state.apply sync_auth_files
+
+    bash /usr/local/bin/user_export.sh
 done

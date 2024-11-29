@@ -30,7 +30,7 @@ while read -r line; do
         else
             # create group
             if ! getent group "$group" >/dev/null 2>&1; then
-                groupadd "$group"
+                groupadd -g "$gid" "$group"
                 echo "Group $group created."
             fi
 

@@ -21,6 +21,7 @@ COPY custom_script/mail_wrapper.sh /usr/local/bin/mail_wrapper.sh
 COPY custom_script/monitor_user.sh /usr/local/bin/monitor_user.sh
 COPY custom_script/user_export.sh /usr/local/bin/user_export.sh
 COPY custom_script/user_import.sh /usr/local/bin/user_import.sh
+COPY custom_script/user_delete.sh /usr/local/bin/user_delete.sh
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
 
 # File permissions
@@ -31,7 +32,7 @@ RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.
     chown slurm:slurm /var/spool/clientmqueue/ && chmod 750 /var/spool/clientmqueue/ && \
     touch /var/log/slurm/sendmail.log && \
     mkdir /auth_files && \
-    chmod +x /usr/local/bin/monitor_user.sh /usr/local/bin/mail_wrapper.sh /usr/local/bin/user_import.sh /usr/local/bin/user_export.sh
+    chmod +x /usr/local/bin/monitor_user.sh /usr/local/bin/mail_wrapper.sh /usr/local/bin/user_import.sh /usr/local/bin/user_export.sh /usr/local/bin/user_delete.sh
 
 # Set root password
 RUN echo 'root:root' | chpasswd

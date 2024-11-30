@@ -4,13 +4,6 @@ LABEL maintainer="pushihao@njust.edu.cn"
 # Base compute node
 RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | tee /etc/yum.repos.d/salt.repo && \
     dnf install -y ohpc-base-compute ohpc-slurm-client \
-                   lmod-ohpc \
-                   ohpc-autotools EasyBuild-ohpc hwloc-ohpc spack-ohpc valgrind-ohpc \
-                   lmod-defaults-gnu13-openmpi5-ohpc \
-                   ohpc-gnu13-runtimes gnu13-compilers-ohpc ohpc-gnu13-perf-tools \ 
-                   ohpc-gnu13-openmpi5-parallel-libs openmpi5-pmix-gnu13-ohpc \
-                   openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
-                   ohpc-gnu13-python-libs \
                    patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran \
                    salt-minion && \
     dnf clean all && \
@@ -18,18 +11,15 @@ RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/d
 
 # Copy configuration
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
-COPY pam.d/sshd pam.d/system-auth pam.d/password-auth /etc/pam.d/
-COPY custom_script/check_GPU.sh /etc/slurm/check_GPU.sh
 COPY custom_script/user_task_end.sh /etc/slurm/epilog.sh
 COPY custom_script/user_task_begin.sh /etc/slurm/prolog.sh
 
 # Script
 RUN mkdir /var/log/slurm && \
-    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/check_GPU.sh
+    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh
 
-# Allow root login && Set root password
-RUN echo "root" > /etc/ssh/allowed_users_file && chmod 600 /etc/ssh/allowed_users_file && \
-    echo 'root:root' | chpasswd
+# Set root password
+RUN echo 'root:root' | chpasswd
 
 # Run after run
 RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \

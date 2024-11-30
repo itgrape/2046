@@ -69,13 +69,13 @@ jobs:
           password: ${{ secrets.DOCKER_ALI_PASSWORD }}
           registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
 
-      - name: Build and push head container image
+      - name: Build and push control container image
         uses: docker/build-push-action@v6.10.0
         with:
           context: ./control
           file: ./control/Containerfile
           push: true
-          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:head
+          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:control
   
   build_db:
     runs-on: ubuntu-latest
@@ -95,13 +95,13 @@ jobs:
           password: ${{ secrets.DOCKER_ALI_PASSWORD }}
           registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
 
-      - name: Build and push head container image
+      - name: Build and push db container image
         uses: docker/build-push-action@v6.10.0
         with:
           context: ./db
           file: ./db/Containerfile
           push: true
-          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:head
+          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:db
   
   build_login:
     runs-on: ubuntu-latest

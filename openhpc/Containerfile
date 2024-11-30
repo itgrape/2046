@@ -9,7 +9,7 @@ RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-rele
     dnf config-manager --set-enabled crb && \
     dnf upgrade -y && \
     dnf swap -y curl-minimal curl && \
-    dnf groupinstall "Development Tools" && \
+    dnf -y groupinstall "Development Tools" && \
     dnf install -y curl unzip jq procps-ng iproute bind-utils findutils ohpc-base \
         iputils vim rsync unzip git sendmail postfix openssh-server munge tmux screen && \
     dnf -y install systemd systemd-libs && \

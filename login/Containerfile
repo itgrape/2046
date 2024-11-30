@@ -1,33 +1,50 @@
 FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:base
 LABEL maintainer="pushihao@njust.edu.cn"
 
+
 # Base compute node
 RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | tee /etc/yum.repos.d/salt.repo && \
-    dnf install -y ohpc-base-compute ohpc-slurm-client \
-                   patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran \
-                   salt-minion && \
+    dnf install -y ohpc-base-compute ohpc-slurm-client inotify-tools patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran salt-master && \
     dnf clean all && \
-    echo "master: head" >> /etc/salt/minion
+    rm -rf /var/cache/dnf/*
+
 
 # Copy configuration
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
 COPY custom_script/user_task_end.sh /etc/slurm/epilog.sh
 COPY custom_script/user_task_begin.sh /etc/slurm/prolog.sh
+COPY custom_script/monitor_user.sh /usr/local/bin/monitor_user.sh
+COPY custom_script/user_export.sh /usr/local/bin/user_export.sh
+COPY custom_script/user_import.sh /usr/local/bin/user_import.sh
+COPY custom_script/user_delete.sh /usr/local/bin/user_delete.sh
+
+
+# Salt sync config
+RUN mkdir -p /srv/salt/auth_files /var/log/slurm && \
+    echo "auto_accept: True" >> /etc/salt/master
+COPY salt_config/sync_auth_files.sls /srv/salt/sync_auth_files.sls
+
 
 # Script
-RUN mkdir /var/log/slurm && \
-    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh
+RUN mkdir /var/log/slurm /auth_files && \
+    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh && \
+    chmod +x /usr/local/bin/monitor_user.sh /usr/local/bin/user_import.sh /usr/local/bin/user_export.sh /usr/local/bin/user_delete.sh
+
 
 # Set root password
 RUN echo 'root:root' | chpasswd
+
 
 # Run after run
 RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
     chmod +x /etc/rc.local
 
+
 # Enable service
 COPY systemd_config/slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
-RUN systemctl enable munge dbus.socket slurmd sshd salt-minion
+COPY systemd_config/monitor_user.service /etc/systemd/system/monitor-user.service
+RUN systemctl enable munge dbus.socket slurmd sshd salt-master monitor-user
+
 
 # Use systemd
 CMD ["/usr/sbin/init"]

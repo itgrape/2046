@@ -1,0 +1,36 @@
+FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:base
+LABEL maintainer="pushihao@njust.edu.cn"
+
+# Base install
+RUN dnf install -y ohpc-slurm-server && \
+    dnf clean all
+
+# Copy configuration
+COPY slurm_config/cgroup.conf /etc/slurm/cgroup.conf
+COPY slurm_config/slurm.conf /etc/slurm/slurm.conf
+COPY slurm_config/gpu_info.conf /etc/slurm/gres.conf
+COPY custom_script/mail_wrapper.sh /usr/local/bin/mail_wrapper.sh
+COPY ssh_config/sshd_config /etc/ssh/sshd_config
+
+# File permissions
+RUN touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && chmod 640 /var/log/slurmctld.log && \
+    touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log && \
+    touch /var/log/slurm/sendmail.log && \
+    chmod +x /usr/local/bin/mail_wrapper.sh
+
+# Set root password
+RUN echo 'root:root' | chpasswd
+
+# Delete nologin file
+RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
+    chmod +x /etc/rc.local
+
+# Mail config
+RUN chown slurm:mail /var/spool/clientmqueue/ && chown slurm:smmsp /var/spool/clientmqueue/ && chmod 770 /var/spool/clientmqueue/
+
+# Enable service
+COPY systemd_config/slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
+RUN systemctl enable munge slurmctld sshd postfix
+
+# Use systemd
+CMD ["/usr/sbin/init"]

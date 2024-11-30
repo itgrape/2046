@@ -5,7 +5,16 @@ LABEL maintainer="pushihao@njust.edu.cn"
 RUN dnf install -y ohpc-slurm-server && \
     dnf clean all
 
+# Configuration
+COPY slurm_config/slurmdbd.conf /etc/slurm/slurmdbd.conf
+
+# File permissions
+RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf && \
+    touch /var/log/slurmdbd.log && \
+    touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log
+
 # Enable service
+COPY systemd_config/slurmdbd_override.conf /etc/systemd/system/slurmdbd.service.d/override.conf
 RUN systemctl enable munge slurmdbd
 
 # Use systemd

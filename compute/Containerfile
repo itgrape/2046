@@ -14,7 +14,7 @@ RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/d
                    patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran \
                    salt-minion && \
     dnf clean all && \
-    echo "master: head" >> /etc/salt/minion
+    echo "master: login-node-1" >> /etc/salt/minion
 
 # Copy configuration
 COPY ssh_config/sshd_config /etc/ssh/sshd_config

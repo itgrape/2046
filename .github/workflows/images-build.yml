@@ -4,11 +4,19 @@ on:
   workflow_dispatch:
     inputs:
       build_openhpc:
-        description: "Build OpenHPC container image"
+        description: "Build OpenHPC base container image"
         required: false
         default: "false"
-      build_head:
-        description: "Build head container image"
+      build_control:
+        description: "Build control container image"
+        required: false
+        default: "false"
+      build_db:
+        description: "Build slurmdbd container image"
+        required: false
+        default: "false"
+      build_login:
+        description: "Build login container image"
         required: false
         default: "false"
       build_compute:
@@ -31,8 +39,9 @@ jobs:
       - name: Docker Login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          username: ${{ secrets.DOCKER_ALI_USERNAME }}
+          password: ${{ secrets.DOCKER_ALI_PASSWORD }}
+          registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
 
       - name: Build and push OpenHPC container image
         uses: docker/build-push-action@v6.10.0
@@ -40,11 +49,11 @@ jobs:
           context: ./openhpc
           file: ./openhpc/Containerfile
           push: true
-          tags: pushihao/ohpc:base
+          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:base
 
-  build_head:
+  build_control:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.build_head == 'true' }}
+    if: ${{ github.event.inputs.build_control == 'true' }}
 
     steps:
       - name: Checkout code
@@ -56,16 +65,69 @@ jobs:
       - name: Docker Login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          username: ${{ secrets.DOCKER_ALI_USERNAME }}
+          password: ${{ secrets.DOCKER_ALI_PASSWORD }}
+          registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
 
       - name: Build and push head container image
         uses: docker/build-push-action@v6.10.0
         with:
-          context: ./head
-          file: ./head/Containerfile
+          context: ./control
+          file: ./control/Containerfile
           push: true
-          tags: pushihao/ohpc:head
+          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:head
+  
+  build_db:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.build_db == 'true' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Docker Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_ALI_USERNAME }}
+          password: ${{ secrets.DOCKER_ALI_PASSWORD }}
+          registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
+
+      - name: Build and push head container image
+        uses: docker/build-push-action@v6.10.0
+        with:
+          context: ./db
+          file: ./db/Containerfile
+          push: true
+          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:head
+  
+  build_login:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.build_login == 'true' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Docker Setup Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_ALI_USERNAME }}
+          password: ${{ secrets.DOCKER_ALI_PASSWORD }}
+          registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
+
+      - name: Build and push login container image
+        uses: docker/build-push-action@v6.10.0
+        with:
+          context: ./login
+          file: ./login/Containerfile
+          push: true
+          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:login
 
   build_compute:
     runs-on: ubuntu-latest
@@ -81,8 +143,9 @@ jobs:
       - name: Docker Login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+          username: ${{ secrets.DOCKER_ALI_USERNAME }}
+          password: ${{ secrets.DOCKER_ALI_PASSWORD }}
+          registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
 
       - name: Build and push compute container image
         uses: docker/build-push-action@v6.10.0
@@ -90,4 +153,4 @@ jobs:
           context: ./compute
           file: ./compute/Containerfile
           push: true
-          tags: pushihao/ohpc:compute
+          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:compute

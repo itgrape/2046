@@ -6,7 +6,7 @@ RUN dnf install -y ohpc-slurm-server && \
     dnf clean all
 
 # Configuration
-COPY slurm_config/slurmdbd.conf /etc/slurm/slurmdbd.conf
+COPY slurmdbd_config/slurmdbd.conf /etc/slurm/slurmdbd.conf
 
 # File permissions
 RUN chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf && \

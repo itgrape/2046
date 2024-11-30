@@ -13,7 +13,8 @@ COPY custom_script/mail_wrapper.sh /usr/local/bin/mail_wrapper.sh
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
 
 # File permissions
-RUN touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && chmod 640 /var/log/slurmctld.log && \
+RUN mkdir /var/log/slurm && \
+    touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && chmod 640 /var/log/slurmctld.log && \
     touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log && \
     touch /var/log/slurm/sendmail.log && \
     chmod +x /usr/local/bin/mail_wrapper.sh

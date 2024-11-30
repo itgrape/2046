@@ -26,7 +26,7 @@ COPY salt_config/sync_auth_files.sls /srv/salt/sync_auth_files.sls
 
 
 # Script
-RUN mkdir /var/log/slurm /auth_files && \
+RUN mkdir /auth_files && \
     chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh && \
     chmod +x /usr/local/bin/monitor_user.sh /usr/local/bin/user_import.sh /usr/local/bin/user_export.sh /usr/local/bin/user_delete.sh
 

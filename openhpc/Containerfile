@@ -13,7 +13,6 @@ RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-rele
     dnf install -y curl unzip jq procps-ng iproute bind-utils findutils ohpc-base \
         iputils vim rsync unzip git sendmail postfix openssh-server munge tmux screen && \
     dnf -y install systemd systemd-libs && \
-    dnf clean all && \
     (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done) && \
     rm -f /lib/systemd/system/multi-user.target.wants/* && \
     rm -f /etc/systemd/system/*.wants/* && \
@@ -22,9 +21,8 @@ RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-rele
     rm -f /lib/systemd/system/sockets.target.wants/*initctl* && \
     rm -f /lib/systemd/system/basic.target.wants/* && \
     rm -f /lib/systemd/system/anaconda.target.wants/* && \
-    # Generate Munge and SSH keys (separate step for flexibility)
     /usr/sbin/create-munge-key && \
     ssh-keygen -A && \
-    # Final cleanup (optional: consider copying this to a separate script)
+    dnf clean all && \
     rm -rf /var/cache/dnf/*
 

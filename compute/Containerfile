@@ -3,6 +3,7 @@ LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base compute node
 RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | tee /etc/yum.repos.d/salt.repo && \
+    dnf -y groupinstall "Development Tools" && \
     dnf install -y ohpc-base-compute ohpc-slurm-client \
                    lmod-ohpc \
                    ohpc-autotools EasyBuild-ohpc hwloc-ohpc spack-ohpc valgrind-ohpc \

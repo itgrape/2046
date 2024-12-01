@@ -38,7 +38,7 @@ RUN chown slurm:mail /var/spool/clientmqueue/ && chown slurm:smmsp /var/spool/cl
 # Enable service
 COPY systemd_config/slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
 COPY systemd_config/slurmdbd_override.conf /etc/systemd/system/slurmdbd.service.d/override.conf
-RUN systemctl enable munge slurmctld slurmdbd sshd postfix
+RUN systemctl enable munge slurmctld slurmdbd sshd postfix salt-minion
 
 # Use systemd
 CMD ["/usr/sbin/init"]

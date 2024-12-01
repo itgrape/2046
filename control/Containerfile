@@ -2,13 +2,16 @@ FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:ba
 LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base install
-RUN dnf install -y ohpc-slurm-server && \
-    dnf clean all
+RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | tee /etc/yum.repos.d/salt.repo && \
+    dnf install -y ohpc-slurm-server salt-minion && \
+    dnf clean all && \
+    echo "master: login-node-1" >> /etc/salt/minion
 
 # Copy configuration
 COPY slurm_config/cgroup.conf /etc/slurm/cgroup.conf
 COPY slurm_config/slurm.conf /etc/slurm/slurm.conf
 COPY slurm_config/gpu_info.conf /etc/slurm/gres.conf
+COPY slurm_config/slurmdbd.conf /etc/slurm/slurmdbd.conf
 COPY custom_script/mail_wrapper.sh /usr/local/bin/mail_wrapper.sh
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
 
@@ -17,7 +20,10 @@ RUN mkdir /var/log/slurm && \
     touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && chmod 640 /var/log/slurmctld.log && \
     touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log && \
     touch /var/log/slurm/sendmail.log && \
-    chmod +x /usr/local/bin/mail_wrapper.sh
+    chmod +x /usr/local/bin/mail_wrapper.sh && \
+    chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf && \
+    touch /var/log/slurmdbd.log && \
+    touch /var/log/munge/munged.log && chown -R munge:munge /var/log/munge && chmod 640 /var/log/munge/munged.log
 
 # Set root password
 RUN echo 'root:root' | chpasswd
@@ -31,7 +37,8 @@ RUN chown slurm:mail /var/spool/clientmqueue/ && chown slurm:smmsp /var/spool/cl
 
 # Enable service
 COPY systemd_config/slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
-RUN systemctl enable munge slurmctld sshd postfix
+COPY systemd_config/slurmdbd_override.conf /etc/systemd/system/slurmdbd.service.d/override.conf
+RUN systemctl enable munge slurmctld slurmdbd sshd postfix
 
 # Use systemd
 CMD ["/usr/sbin/init"]

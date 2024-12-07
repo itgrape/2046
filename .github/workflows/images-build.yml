@@ -11,10 +11,6 @@ on:
         description: "Build control container image"
         required: false
         default: "false"
-      build_db:
-        description: "Build slurmdbd container image"
-        required: false
-        default: "false"
       build_login:
         description: "Build login container image"
         required: false
@@ -76,33 +72,7 @@ jobs:
           file: ./control/Containerfile
           push: true
           tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:control
-  
-  build_db:
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.build_db == 'true' }}
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Docker Setup Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Docker Login
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_ALI_USERNAME }}
-          password: ${{ secrets.DOCKER_ALI_PASSWORD }}
-          registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
-
-      - name: Build and push db container image
-        uses: docker/build-push-action@v6.10.0
-        with:
-          context: ./db
-          file: ./db/Containerfile
-          push: true
-          tags: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:db
-  
   build_login:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.build_login == 'true' }}

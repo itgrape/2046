@@ -3,8 +3,8 @@ name: Build Images
 on:
   workflow_dispatch:
     inputs:
-      build_openhpc:
-        description: "Build OpenHPC base container image"
+      build_base:
+        description: "Build Base container image"
         required: false
         default: "false"
       build_control:
@@ -25,9 +25,9 @@ on:
         default: "false"
 
 jobs:
-  build_openhpc:
+  build_base:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.build_openhpc == 'true' }}
+    if: ${{ github.event.inputs.build_base == 'true' }}
 
     steps:
       - name: Checkout code
@@ -43,7 +43,7 @@ jobs:
           password: ${{ secrets.DOCKER_ALI_PASSWORD }}
           registry: crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com
 
-      - name: Build and push OpenHPC container image
+      - name: Build and push base container image
         uses: docker/build-push-action@v6.10.0
         with:
           context: ./openhpc

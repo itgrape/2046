@@ -2,8 +2,7 @@ FROM registry.docker.com/library/rockylinux:9
 LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base install and clean
-RUN dnf config-manager --set-enabled crb && \
-    dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
     dnf upgrade -y && \
     dnf install -y openldap openldap-servers openldap-clients nginx phpldapadmin && \
     dnf -y install systemd systemd-libs && \

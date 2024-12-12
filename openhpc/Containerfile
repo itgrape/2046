@@ -28,4 +28,4 @@ RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-rele
 # Configuration
 COPY pam.d/system-auth pam.d/password-auth /etc/pam.d/
 COPY openldap_config/nslcd.conf /etc/nslcd.conf
-COPY openldap_config/nssswitch.conf /etc/nsswitch.conf
+COPY openldap_config/nsswitch.conf /etc/nsswitch.conf

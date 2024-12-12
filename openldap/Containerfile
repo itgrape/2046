@@ -1,0 +1,35 @@
+FROM registry.docker.com/library/rockylinux:9
+LABEL maintainer="pushihao@njust.edu.cn"
+
+# Base install and clean
+RUN dnf config-manager --set-enabled crb && \
+    dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+    dnf upgrade -y && \
+    dnf install -y openldap openldap-servers openldap-clients nginx phpldapadmin && \
+    dnf -y install systemd systemd-libs && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf/* && \
+    (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done) && \
+    rm -f /lib/systemd/system/multi-user.target.wants/* && \
+    rm -f /etc/systemd/system/*.wants/* && \
+    rm -f /lib/systemd/system/local-fs.target.wants/* && \
+    rm -f /lib/systemd/system/sockets.target.wants/*udev* && \
+    rm -f /lib/systemd/system/sockets.target.wants/*initctl* && \
+    rm -f /lib/systemd/system/basic.target.wants/* && \
+    rm -f /lib/systemd/system/anaconda.target.wants/* && \
+    
+# Copy configuration
+COPY ldap_init/* /root
+COPY php_ldap_admin_config/nginx_ldap.conf /etc/nginx/default.d/nginx_ldap.conf
+COPY php_ldap_admin_config/config.php /etc/phpldapadmin/config.php
+
+# Import LDAP info
+RUN ldapmodify -Q -Y EXTERNAL -H ldapi:/// -f /root/init.ldif && \
+    ldapmodify -Q -Y EXTERNAL -H ldapi:/// -f /root/access.ldif && \
+    ldapmodify -Q -Y EXTERNAL -H ldapi:/// -f /root/base.ldif
+
+# Service
+RUN systemctl enable nginx slapd
+
+# Entrypoint
+CMD ["/usr/sbin/init"]

@@ -1,0 +1,11 @@
+dn: dc=pushihao,dc=com
+o: PSH Organization
+dc: pushihao
+objectClass: top
+objectClass: dcObject
+objectclass: organization
+
+dn: cn=admin,dc=pushihao,dc=com
+cn: admin
+objectClass: organizationalRole
+description: Directory Manager

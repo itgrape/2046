@@ -18,14 +18,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
     rm -f /lib/systemd/system/anaconda.target.wants/*
 
 # Copy configuration
-COPY ldap_init/* /root
 COPY php_ldap_admin_config/nginx_ldap.conf /etc/nginx/default.d/nginx_ldap.conf
 COPY php_ldap_admin_config/config.php /etc/phpldapadmin/config.php
-
-# Import LDAP info
-RUN ldapmodify -Q -Y EXTERNAL -H ldapi:/// -f /root/init.ldif && \
-    ldapmodify -Q -Y EXTERNAL -H ldapi:/// -f /root/access.ldif && \
-    ldapmodify -Q -Y EXTERNAL -H ldapi:/// -f /root/base.ldif
 
 # Service
 RUN systemctl enable nginx slapd

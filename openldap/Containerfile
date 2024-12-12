@@ -18,7 +18,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
     rm -f /lib/systemd/system/anaconda.target.wants/*
 
 # Copy configuration
-COPY php_ldap_admin_config/nginx_ldap.conf /etc/nginx/default.d/nginx_ldap.conf
+COPY php_ldap_admin_config/nginx.conf /etc/nginx/nginx.conf
 COPY php_ldap_admin_config/config.php /etc/phpldapadmin/config.php
 
 # Service

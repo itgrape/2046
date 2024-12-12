@@ -2,10 +2,9 @@ FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:ba
 LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base install
-RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | tee /etc/yum.repos.d/salt.repo && \
-    dnf install -y ohpc-slurm-server salt-minion && \
+RUN dnf install -y ohpc-slurm-server && \
     dnf clean all && \
-    echo "master: login-node-1" >> /etc/salt/minion
+    rm -rf /var/cache/dnf/*
 
 # Copy configuration
 COPY slurm_config/cgroup.conf /etc/slurm/cgroup.conf
@@ -38,7 +37,7 @@ RUN chown slurm:mail /var/spool/clientmqueue/ && chown slurm:smmsp /var/spool/cl
 # Enable service
 COPY systemd_config/slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
 COPY systemd_config/slurmdbd_override.conf /etc/systemd/system/slurmdbd.service.d/override.conf
-RUN systemctl enable munge slurmctld slurmdbd sshd postfix salt-minion
+RUN systemctl enable munge slurmctld slurmdbd sshd postfix nslcd
 
 # Use systemd
 CMD ["/usr/sbin/init"]

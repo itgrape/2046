@@ -2,8 +2,7 @@ FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:ba
 LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base compute node
-RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/download/salt.repo | tee /etc/yum.repos.d/salt.repo && \
-    dnf -y groupinstall "Development Tools" && \
+RUN dnf -y groupinstall "Development Tools" && \
     dnf install -y ohpc-base-compute ohpc-slurm-client \
                    lmod-ohpc \
                    ohpc-autotools EasyBuild-ohpc hwloc-ohpc spack-ohpc valgrind-ohpc \
@@ -12,10 +11,9 @@ RUN curl -fsSL https://github.com/saltstack/salt-install-guide/releases/latest/d
                    ohpc-gnu13-openmpi5-parallel-libs openmpi5-pmix-gnu13-ohpc \
                    openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
                    ohpc-gnu13-python-libs \
-                   patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran \
-                   salt-minion && \
+                   patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran && \
     dnf clean all && \
-    echo "master: login-node-1" >> /etc/salt/minion
+    rm -rf /var/cache/dnf/*
 
 # Copy configuration
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
@@ -38,7 +36,7 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
 
 # Enable service
 COPY systemd_config/slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
-RUN systemctl enable munge dbus.socket slurmd sshd salt-minion
+RUN systemctl enable munge dbus.socket slurmd sshd nslcd
 
 # Use systemd
 CMD ["/usr/sbin/init"]

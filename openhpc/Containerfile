@@ -3,7 +3,8 @@ LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base install
 ARG ARCH=x86_64
-RUN dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-release-3-1.el9.$ARCH.rpm && \
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+    dnf install -y http://repos.openhpc.community/OpenHPC/3/EL_9/$ARCH/ohpc-release-3-1.el9.$ARCH.rpm && \
     dnf install -y dnf-plugins-core && \
     dnf config-manager --set-enabled crb && \
     dnf upgrade -y && \

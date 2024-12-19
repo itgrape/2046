@@ -1,0 +1,31 @@
+FROM registry.docker.com/library/rockylinux:9
+
+ENV HTTP_PROXY=http://124.221.104.216:9500
+ENV HTTPS_PROXY=http://124.221.104.216:9500
+
+RUN dnf install -y systemd && \
+    dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm && \
+    dnf install -y ansible && \
+    ansible-galaxy collection install containers.podman
+
+RUN dnf install -y openssh-server && \
+    ssh-keygen -A && \
+    echo 'root:root' | chpasswd && \
+    sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#StrictModes yes/StrictModes no/' /etc/ssh/sshd_config && \
+    sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/^#UsePAM no/UsePAM yes/' /etc/ssh/sshd_config && \
+    systemctl enable sshd
+
+RUN dnf install -y openldap-clients nss-pam-ldapd
+COPY pam.d/system-auth pam.d/password-auth /etc/pam.d/
+COPY openldap_config/nslcd.conf /etc/nslcd.conf
+COPY openldap_config/nsswitch.conf /etc/nsswitch.conf
+RUN chmod 640 /etc/nslcd.conf && \
+    systemctl enable nslcd
+
+RUN dnf install -y curl unzip jq procps-ng iproute bind-utils findutils \
+    iputils vim rsync unzip git munge tmux screen
+
+CMD ["/usr/sbin/init"]

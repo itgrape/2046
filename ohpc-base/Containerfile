@@ -25,7 +25,7 @@ COPY openldap_config/nsswitch.conf /etc/nsswitch.conf
 RUN chmod 640 /etc/nslcd.conf && \
     systemctl enable nslcd
 
-RUN dnf install -y curl unzip jq procps-ng iproute bind-utils findutils \
+RUN dnf install -y unzip jq procps-ng iproute bind-utils findutils \
     iputils vim rsync unzip git munge tmux screen
 
 CMD ["/usr/sbin/init"]

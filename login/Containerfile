@@ -23,7 +23,7 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
 
 # Enable service
 COPY systemd_config/slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
-RUN systemctl enable munge dbus.socket slurmd sshd nslcd
+RUN systemctl enable munge dbus.socket slurmd sshd nslcd chronyd
 
 # Use systemd
 CMD ["/usr/sbin/init"]

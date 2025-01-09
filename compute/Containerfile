@@ -2,13 +2,13 @@ FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:ba
 LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base compute node
+# package EasyBuild-ohpc hwloc-ohpc spack-ohpc valgrind-ohpc | ohpc-gnu13-openmpi5-parallel-libs openmpi5-pmix-gnu13-ohpc
 RUN dnf -y groupinstall "Development Tools" && \
     dnf install -y ohpc-base-compute ohpc-slurm-client \
                    lmod-ohpc \
-                   ohpc-autotools EasyBuild-ohpc hwloc-ohpc spack-ohpc valgrind-ohpc \
+                   ohpc-autotools \
                    lmod-defaults-gnu13-openmpi5-ohpc \
                    ohpc-gnu13-runtimes gnu13-compilers-ohpc ohpc-gnu13-perf-tools \ 
-                   ohpc-gnu13-openmpi5-parallel-libs openmpi5-pmix-gnu13-ohpc \
                    openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
                    ohpc-gnu13-python-libs \
                    patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran && \

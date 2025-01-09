@@ -10,7 +10,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
     dnf upgrade -y && \
     dnf swap -y curl-minimal curl && \
     dnf install -y curl unzip jq procps-ng iproute bind-utils findutils ohpc-base openldap-clients nss-pam-ldapd \
-        iputils vim rsync unzip git sendmail postfix openssh-server munge chrony tmux screen && \
+        bpftool iputils vim rsync unzip git sendmail postfix openssh-server munge chrony tmux screen && \
     dnf -y install systemd systemd-libs && \
     (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done) && \
     rm -f /lib/systemd/system/multi-user.target.wants/* && \

@@ -38,7 +38,7 @@ Port 22
 
 #LoginGraceTime 2m
 PermitRootLogin yes
-StrictModes no
+#StrictModes no
 #MaxAuthTries 6
 #MaxSessions 10
 

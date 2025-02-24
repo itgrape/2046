@@ -17,12 +17,14 @@ fi
 if [ "${SLURM_JOB_USER}" = "" ]; then
     exit 0
 fi
+
 #
 # Stop check GPU
 #
 unit_name="check_service_${SLURM_JOB_USER}_${SLURM_JOB_ID}"
 systemctl stop $unit_name
 echo "Stopped systemd service $unit_name for job $SLURM_JOB_ID" >> /var/log/slurm/epilog.log
+
 #
 # Don't try to kill user root or system daemon jobs
 #

@@ -10,7 +10,7 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
     dnf upgrade -y && \
     dnf swap -y curl-minimal curl && \
     dnf install -y curl unzip jq procps-ng iproute bind-utils findutils ohpc-base openldap-clients nss-pam-ldapd \
-        bpftool iputils vim rsync unzip git sendmail postfix openssh-server munge chrony tmux screen && \
+        bpftool iputils vim rsync git openssh-server munge tmux screen && \
     dnf -y install systemd systemd-libs && \
     (cd /lib/systemd/system/sysinit.target.wants/; for i in *; do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done) && \
     rm -f /lib/systemd/system/multi-user.target.wants/* && \
@@ -20,11 +20,11 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
     rm -f /lib/systemd/system/sockets.target.wants/*initctl* && \
     rm -f /lib/systemd/system/basic.target.wants/* && \
     rm -f /lib/systemd/system/anaconda.target.wants/* && \
-    /usr/sbin/create-munge-key && \
-    ssh-keygen -A && \
-    # Clean up dnf cache to reduce image size
     dnf clean all && \
     rm -rf /var/cache/dnf/*
+
+RUN /usr/sbin/create-munge-key && \
+    ssh-keygen -A
 
 # Configuration
 COPY pam.d/system-auth pam.d/password-auth /etc/pam.d/

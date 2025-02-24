@@ -2,10 +2,10 @@
 
 exec >> /var/log/slurm/check_GPU.log 2>&1
 
-GPU_UTILIZATION_THRESHOLD=20   # 设置GPU平均使用率阈值百分比，低于此值将释放作业
-GPU_MEMORY_THRESHOLD=20        # 设置GPU平均内存使用率阈值百分比，低于此值将释放作业
-CHECK_INTERVAL=60              # GPU监控间隔时间（单位：秒）
-MAX_HISTORY_SIZE=20            # 求最近多少次监控的平均值
+GPU_UTILIZATION_THRESHOLD=$THRESHOLD   # 设置GPU平均使用率阈值百分比，低于此值将释放作业
+GPU_MEMORY_THRESHOLD=$THRESHOLD        # 设置GPU平均内存使用率阈值百分比，低于此值将释放作业
+CHECK_INTERVAL=180                     # GPU监控间隔时间（单位：秒）
+MAX_HISTORY_SIZE=20                    # 求最近多少次监控的平均值
 
 JOB_ID=$SLURM_JOB_ID
 USER_ID=$SLURM_JOB_USER

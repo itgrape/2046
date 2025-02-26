@@ -18,12 +18,28 @@ if [ "${SLURM_JOB_USER}" = "" ]; then
     exit 0
 fi
 
+
 #
 # Stop check GPU
 #
 unit_name="check_service_${SLURM_JOB_USER}_${SLURM_JOB_ID}"
 systemctl stop $unit_name
 echo "Stopped systemd service $unit_name for job $SLURM_JOB_ID" >> /var/log/slurm/epilog.log
+
+
+#
+# Remove user from denied_users
+#
+{
+    flock -x 200
+    if [[ "$SLURM_JOB_PARTITION" == "Debug" ]]; then
+        DEBUG_JOBS=$(squeue -u "$SLURM_JOB_USER" -h -o "%P" | grep -cx 'Debug')
+        if [[ $DEBUG_JOBS -eq 1 ]]; then
+            echo "$SLURM_JOB_USER" >> /etc/ssh/denied_users
+        fi
+    fi
+} 200>/tmp/denied_users.lock
+
 
 #
 # Don't try to kill user root or system daemon jobs
@@ -32,12 +48,14 @@ if [ "${SLURM_UID}" -lt 1000 ]; then
     exit 0
 fi
 
+
 job_list=$("${SLURM_BIN}"squeue --noheader --format=%A --user="${SLURM_UID}" --node=localhost)
 for job_id in ${job_list}; do
 if [ "${job_id}" -ne "${SLURM_JOB_ID}" ]; then
         exit 0
     fi
 done
+
 
 #
 # No other SLURM jobs, purge all remaining processes of this user if and only
@@ -47,5 +65,6 @@ done
 if ! pgrep -x slurmctld >/dev/null; then
     pkill -KILL -U "${SLURM_UID}"
 fi
+
 
 exit 0

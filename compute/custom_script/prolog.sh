@@ -1,5 +1,16 @@
 #!/bin/bash
 
+if [ "${SLURM_UID}" = "" ]; then
+    exit 0
+fi
+if [ "${SLURM_JOB_ID}" = "" ]; then
+    exit 0
+fi
+if [ "${SLURM_JOB_USER}" = "" ]; then
+    exit 0
+fi
+
+
 echo "Prolog script started at $(date) for User ${SLURM_JOB_USER} Job ${SLURM_JOB_ID}" >> /var/log/slurm/prolog.log
 
 

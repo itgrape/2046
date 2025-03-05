@@ -32,7 +32,7 @@ echo "Stopped systemd service $unit_name for job $SLURM_JOB_ID" >> /var/log/slur
 #
 URL="http://login-node-01:5000/gpu_cancel"
 JSON_DATA=$(jq -n --arg hostname "$(hostname)" --arg username "$SLURM_JOB_USER" \
-                  --arg job_id "$JOB_ID" \
+                  --arg job_id "$SLURM_JOB_ID" \
                 '{hostname: $hostname, username: $username, job_id: $job_id}')
 curl -x POST "$URL" \
         -H "Content-Type: application/json" \

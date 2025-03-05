@@ -14,6 +14,9 @@ COPY custom_script/epilog.sh /etc/slurm/epilog.sh
 COPY custom_script/prolog.sh /etc/slurm/prolog.sh
 COPY cockpit/cockpit.conf /etc/cockpit/cockpit.conf
 
+# Copy app
+COPY http_app/app /usr/local/bin/app
+
 # Script
 RUN chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh
 
@@ -26,7 +29,8 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
 
 # Enable service
 COPY systemd_config/slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
-RUN systemctl enable munge dbus.socket slurmd sshd nslcd cockpit.socket
+COPY systemd_config/http_app.service /etc/systemd/system/http_app.service
+RUN systemctl enable munge dbus.socket slurmd sshd nslcd cockpit.socket http_app
 
 # Use systemd
 CMD ["/usr/sbin/init"]

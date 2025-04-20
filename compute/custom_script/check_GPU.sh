@@ -73,7 +73,7 @@ while true; do
                       --arg job_id "$JOB_ID" --arg gpu_index "$GPU" --arg gpu_usage "$UTIL" \
                       --arg gpu_memory_used "$MEM_USED" --arg gpu_memory_total "$MEM_TOTAL" \
                     '{hostname: $hostname, username: $username, job_id: $job_id, gpu_index: $gpu_index, gpu_usage: $gpu_usage, gpu_memory_used: $gpu_memory_used, gpu_memory_total: $gpu_memory_total}')
-    curl -x POST "$URL" \
+    curl -X POST "$URL" \
          -H "Content-Type: application/json" \
          -d "$JSON_DATA"
   done

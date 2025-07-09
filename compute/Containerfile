@@ -11,7 +11,7 @@ RUN dnf -y groupinstall "Development Tools" && \
                    ohpc-gnu13-runtimes gnu13-compilers-ohpc ohpc-gnu13-perf-tools \ 
                    openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
                    ohpc-gnu13-python-libs \
-                   patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran && \
+                   patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran dropbear && \
     dnf clean all && \
     rm -rf /var/cache/dnf/*
 

@@ -17,6 +17,9 @@ COPY cockpit/cockpit.conf /etc/cockpit/cockpit.conf
 # Copy app
 COPY http_app/app /usr/local/bin/app
 
+# Copy cockpit slurm page
+COPY cockpit/slurm /usr/share/cockpit/slurm
+
 # Script
 RUN chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh
 

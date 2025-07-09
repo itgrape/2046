@@ -1,0 +1,10 @@
+{
+    "version": "0.0.1",
+
+    "tools": {
+        "index": {
+            "label": "Slurm 工具",
+            "order": 0
+        }
+    }
+}

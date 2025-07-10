@@ -137,6 +137,9 @@ while true; do
     # 检查最近MAX_HISTORY_SIZE次的平均使用率是否低于阈值
     if (( $RECENT_AVG_UTILIZATION < $GPU_UTILIZATION_THRESHOLD )) || (( $RECENT_AVG_MEMORY < $GPU_MEMORY_THRESHOLD )); then
       echo "Recent average GPU usage is too low for job $JOB_ID. Releasing the job."
+      
+      # 给用户发送为什么释放资源
+      echo "Job $JOB_ID by user $USER_ID, Current GPU usage: $AVG_GPU_UTILIZATION%, Recent Average GPU usage: $RECENT_AVG_UTILIZATION% , Current GPU memory usage: $AVG_GPU_MEMORY%, Recent Average GPU memory usage: $RECENT_AVG_MEMORY%. Recent average GPU usage is too low for job $JOB_ID. Releasing the job." >> $SLURM_JOB_STDOUT
       scancel $JOB_ID
       exit 0
     fi

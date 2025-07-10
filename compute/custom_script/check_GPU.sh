@@ -4,8 +4,9 @@ exec >> /var/log/slurm/check_GPU.log 2>&1
 
 GPU_UTILIZATION_THRESHOLD=$THRESHOLD   # 设置GPU平均使用率阈值百分比，低于此值将释放作业
 GPU_MEMORY_THRESHOLD=$THRESHOLD        # 设置GPU平均内存使用率阈值百分比，低于此值将释放作业
-CHECK_INTERVAL=180                     # GPU监控间隔时间（单位：秒）
-MAX_HISTORY_SIZE=20                    # 求最近多少次监控的平均值
+CHECK_INTERVAL=60                      # GPU监控间隔时间（单位：秒）
+MAX_HISTORY_SIZE=60                    # 求最近多少次监控的平均值
+
 
 JOB_ID=$SLURM_JOB_ID
 USER_ID=$SLURM_JOB_USER
@@ -19,6 +20,39 @@ echo "Check GPU script started for job $JOB_ID by user $USER_ID"
 
 
 ALLOCATED_GPUS=$(echo $SLURM_JOB_GPUS | tr ',' ' ')
+
+
+# 根据卡的好坏动态设置监控的时间
+BEST_CARD_SCORE=0
+for GPU in $ALLOCATED_GPUS; do
+  GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader,nounits -i $GPU)
+  CURRENT_CARD_SCORE=0
+  
+  # 核心逻辑：给不同的卡打分，分数越高代表卡越好
+  case "$GPU_NAME" in
+    *"5090"*)          CURRENT_CARD_SCORE=100 ;;
+    *"A6000"*)         CURRENT_CARD_SCORE=90  ;;
+    *"4090"*)          CURRENT_CARD_SCORE=80  ;;
+    *"3090"*)          CURRENT_CARD_SCORE=70  ;;
+    *"A10"*)           CURRENT_CARD_SCORE=50  ;;
+    *)                 CURRENT_CARD_SCORE=10  ;;
+  esac
+
+  echo "  - 检测到 GPU $GPU: $GPU_NAME, 评分: $CURRENT_CARD_SCORE"
+  if (( CURRENT_CARD_SCORE > BEST_CARD_SCORE )); then
+    BEST_CARD_SCORE=$CURRENT_CARD_SCORE
+  fi
+done
+case "$BEST_CARD_SCORE" in
+  100) MAX_HISTORY_SIZE=10 ;;
+  90)  MAX_HISTORY_SIZE=20 ;;
+  80)  MAX_HISTORY_SIZE=30 ;;
+  70)  MAX_HISTORY_SIZE=120;;
+  50)  MAX_HISTORY_SIZE=420;;
+  *)   MAX_HISTORY_SIZE=600;;
+esac
+echo "Best card score: $BEST_CARD_SCORE, Set MAX_HISTORY_SIZE = $MAX_HISTORY_SIZE"
+
 
 GPU_UTIL_HISTORY=()
 GPU_MEM_HISTORY=()

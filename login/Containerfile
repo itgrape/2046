@@ -3,7 +3,7 @@ LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base compute node
 RUN dnf install -y ohpc-base-compute ohpc-slurm-client \
-    inotify-tools patch file zstd bzip2 xz cockpit \
+    inotify-tools patch file zstd bzip2 xz cockpit dropbear \
     python3 gcc-c++ gcc-gfortran && \
     dnf clean all && \
     rm -rf /var/cache/dnf/*

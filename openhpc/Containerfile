@@ -24,7 +24,8 @@ RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.n
     rm -rf /var/cache/dnf/*
 
 RUN /usr/sbin/create-munge-key && \
-    ssh-keygen -A
+    ssh-keygen -A && \
+    setcap cap_net_raw+ep /usr/bin/ping
 
 # Configuration
 COPY pam.d/system-auth pam.d/password-auth /etc/pam.d/

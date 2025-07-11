@@ -19,12 +19,13 @@ RUN dnf -y groupinstall "Development Tools" && \
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
 COPY pam.d/sshd pam.d/system-auth pam.d/password-auth /etc/pam.d/
 COPY custom_script/check_GPU.sh /etc/slurm/check_GPU.sh
+COPY custom_script/check_CPU.sh /etc/slurm/check_CPU.sh
 COPY custom_script/epilog.sh /etc/slurm/epilog.sh
 COPY custom_script/prolog.sh /etc/slurm/prolog.sh
 
 # Script
 RUN mkdir /var/log/slurm && \
-    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/check_GPU.sh
+    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/check_GPU.sh /etc/slurm/check_CPU.sh
 
 # Set root password
 RUN echo 'root:root' | chpasswd

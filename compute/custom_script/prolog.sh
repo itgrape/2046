@@ -15,10 +15,25 @@ echo "Prolog script started at $(date) for User ${SLURM_JOB_USER} Job ${SLURM_JO
 
 
 unit_name="check_service_${SLURM_JOB_USER}_${SLURM_JOB_ID}"
-if [[ "$SLURM_JOB_PARTITION" == "Debug" ]]; then
-    systemd-run --unit=$unit_name --slice=background --setenv=SLURM_JOB_STDOUT=$SLURM_JOB_STDOUT --setenv=SLURM_JOB_ID=$SLURM_JOB_ID --setenv=SLURM_JOB_USER=$SLURM_JOB_USER --setenv=SLURM_JOB_GPUS=$SLURM_JOB_GPUS --setenv=THRESHOLD=0 bash "/etc/slurm/check_GPU.sh"
-else
-    systemd-run --unit=$unit_name --slice=background --setenv=SLURM_JOB_STDOUT=$SLURM_JOB_STDOUT --setenv=SLURM_JOB_ID=$SLURM_JOB_ID --setenv=SLURM_JOB_USER=$SLURM_JOB_USER --setenv=SLURM_JOB_GPUS=$SLURM_JOB_GPUS --setenv=THRESHOLD=50 bash "/etc/slurm/check_GPU.sh"
+SLURM_JOB_PARTITION_LOWER="${SLURM_JOB_PARTITION,,}"
+
+if [[ "$SLURM_JOB_PARTITION_LOWER" == *gpu* ]]; then
+    systemd-run \
+        --unit=$unit_name \
+        --slice=background \
+        --setenv=SLURM_JOB_STDOUT=$SLURM_JOB_STDOUT \
+        --setenv=SLURM_JOB_ID=$SLURM_JOB_ID \
+        --setenv=SLURM_JOB_USER=$SLURM_JOB_USER \
+        --setenv=SLURM_JOB_GPUS=$SLURM_JOB_GPUS \
+        bash "/etc/slurm/check_GPU.sh"
+elif [[ "$SLURM_JOB_PARTITION_LOWER" == *cpu* ]]; then
+    systemd-run \
+        --unit=$unit_name \
+        --slice=background \
+        --setenv=SLURM_JOB_STDOUT=$SLURM_JOB_STDOUT \
+        --setenv=SLURM_JOB_ID=$SLURM_JOB_ID \
+        --setenv=SLURM_JOB_USER=$SLURM_JOB_USER \
+        bash "/etc/slurm/check_CPU.sh"
 fi
 
 

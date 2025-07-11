@@ -40,20 +40,6 @@ curl -X POST "$URL" \
 
 
 #
-# Remove user from denied_users
-#
-{
-    flock -x 200
-    if [[ "$SLURM_JOB_PARTITION" == "Debug" ]]; then
-        DEBUG_JOBS=$(squeue -u "$SLURM_JOB_USER" -h -o "%P" | grep -cx 'Debug')
-        if [[ $DEBUG_JOBS -eq 1 ]]; then
-            echo "$SLURM_JOB_USER" >> /etc/ssh/denied_users
-        fi
-    fi
-} 200>/tmp/denied_users.lock
-
-
-#
 # Don't try to kill user root or system daemon jobs
 #
 if [ "${SLURM_UID}" -lt 1000 ]; then

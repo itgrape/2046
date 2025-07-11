@@ -4,7 +4,6 @@ auth       include      postlogin
 account    required     pam_sepermit.so
 account    required     pam_nologin.so
 account    include      password-auth
-account    required     pam_listfile.so item=user sense=deny onerr=succeed file=/etc/ssh/denied_users
 account    required     pam_slurm_adopt.so
 password   include      password-auth
 # pam_selinux.so close should be the first session rule

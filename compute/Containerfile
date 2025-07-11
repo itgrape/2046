@@ -29,9 +29,6 @@ RUN mkdir /var/log/slurm && \
 # Set root password
 RUN echo 'root:root' | chpasswd
 
-# Denied users script
-RUN touch /etc/ssh/denied_users && chmod 600 /etc/ssh/denied_users
-
 # Run after run
 RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
     chmod +x /etc/rc.local

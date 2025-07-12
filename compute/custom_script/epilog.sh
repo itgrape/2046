@@ -14,30 +14,6 @@ fi
 if [ "${SLURM_JOB_ID}" = "" ]; then
     exit 0
 fi
-if [ "${SLURM_JOB_USER}" = "" ]; then
-    exit 0
-fi
-
-
-#
-# Stop check GPU
-#
-unit_name="check_service_${SLURM_JOB_USER}_${SLURM_JOB_ID}"
-systemctl stop $unit_name
-echo "Stopped systemd service $unit_name for job $SLURM_JOB_ID" >> /var/log/slurm/epilog.log
-
-
-#
-# Clean gpu resource log for completed task
-#
-URL="http://login-node-01:5000/gpu_cancel"
-JSON_DATA=$(jq -n --arg hostname "$(hostname)" --arg username "$SLURM_JOB_USER" \
-                  --arg job_id "$SLURM_JOB_ID" \
-                '{hostname: $hostname, username: $username, job_id: $job_id}')
-curl -X POST "$URL" \
-        -H "Content-Type: application/json" \
-        -d "$JSON_DATA"
-
 
 #
 # Don't try to kill user root or system daemon jobs
@@ -46,14 +22,12 @@ if [ "${SLURM_UID}" -lt 1000 ]; then
     exit 0
 fi
 
-
 job_list=$("${SLURM_BIN}"squeue --noheader --format=%A --user="${SLURM_UID}" --node=localhost)
 for job_id in ${job_list}; do
-if [ "${job_id}" -ne "${SLURM_JOB_ID}" ]; then
+    if [ "${job_id}" -ne "${SLURM_JOB_ID}" ]; then
         exit 0
     fi
 done
-
 
 #
 # No other SLURM jobs, purge all remaining processes of this user if and only
@@ -63,6 +37,4 @@ done
 if ! pgrep -x slurmctld >/dev/null; then
     pkill -KILL -U "${SLURM_UID}"
 fi
-
-
 exit 0

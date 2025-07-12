@@ -6,16 +6,35 @@ CPU_CHECKS=30
 MONITOR_INTERVAL=60
 MONITOR_LOG_PATH="${SLURM_SUBMIT_DIR}/monitor-${SLURM_JOB_ID}.log"
 
-/usr/local/bin/job_helper register $CPU_CHECKS $MONITOR_LOG_PATH
+HELPER_PATH="/usr/local/bin/job_helper"
+MONITOR_PID_DIR="${HOME}/.monitor"
+MONITOR_PID_FILE="${MONITOR_PID_DIR}/monitor-${SLURM_JOB_ID}.pid"
+
+
+exec > "${SLURM_SUBMIT_DIR}/prolog-${SLURM_JOB_ID}.log" 2>&1
+
+echo "--- [Prolog] Starting setup for Job ${SLURM_JOB_ID} ---"
+echo "Running as user: $(whoami)"
+echo "Submit directory: ${SLURM_SUBMIT_DIR}"
+
+echo "[Prolog] Registering job with daemon..."
+$HELPER_PATH register $CPU_CHECKS $MONITOR_LOG_PATH
 if [ $? -ne 0 ]; then
+    echo "[Prolog] Error: Job registration with monitoring daemon failed. Aborting."
     exit 1
 fi
 
+echo "[Prolog] Registration successful."
+
+
+
 # =========== 启动监控进程 ===========
-./job_helper monitor $MONITOR_INTERVAL &
+$HELPER_PATH monitor $MONITOR_INTERVAL &
 MONITOR_PID=$!
-mkdir -p "${HOME}/.monitor"
-echo $MONITOR_PID > "${HOME}/.monitor/monitor-${SLURM_JOB_ID}.pid"
+mkdir -p "$MONITOR_PID_DIR"
+echo $MONITOR_PID > "$MONITOR_PID_FILE"
+echo "[Prolog] Monitor process started with PID: $MONITOR_PID. PID saved to ${MONITOR_PID_FILE}"
+
 
 
 

@@ -192,8 +192,10 @@ func getGpuCountFromScore(score int) int {
 		return 120
 	case 50:
 		return 420
-	default: // 包括 score 为 0 或 10 的情况
-		return 600
+	case 0:
+		return 10086 // 没有卡
+	default:
+		return 600 // 有卡，但非上述列出来的卡
 	}
 }
 

@@ -85,6 +85,13 @@ func main() {
 		globalLogger.Fatalf("Failed to listen on unix socket %s: %v", SocketPath, err)
 	}
 	defer listener.Close()
+
+	// 修改 socket 文件的权限，允许所有用户连接
+	if err := os.Chmod(SocketPath, 0777); err != nil {
+		globalLogger.Fatalf("Failed to change socket permissions: %v", err)
+	}
+	globalLogger.Printf("Set socket %s permissions to 0777", SocketPath)
+
 	globalLogger.Printf("Listening on %s", SocketPath)
 
 	for {

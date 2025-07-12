@@ -1,3 +1,19 @@
+FROM golang:1.22-alpine AS builder
+
+RUN mkdir -p /app/bin
+
+WORKDIR /app/client
+COPY custom_script/check/client/go.mod custom_script/check/client/go.sum custom_script/check/client/job_helper.go ./
+RUN go mod download && go mod tidy
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/bin/job_helper .
+
+WORKDIR /app/monitor
+COPY custom_script/check/monitor/go.mod custom_script/check/monitor/node_monitor.go ./
+RUN go mod download && go mod tidy
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/bin/node_monitor .
+
+
+
 FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:base
 LABEL maintainer="pushihao@njust.edu.cn"
 
@@ -18,14 +34,17 @@ RUN dnf -y groupinstall "Development Tools" && \
 # Copy configuration
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
 COPY pam.d/sshd pam.d/system-auth pam.d/password-auth /etc/pam.d/
-COPY custom_script/check_GPU.sh /etc/slurm/check_GPU.sh
-COPY custom_script/check_CPU.sh /etc/slurm/check_CPU.sh
 COPY custom_script/epilog.sh /etc/slurm/epilog.sh
 COPY custom_script/prolog.sh /etc/slurm/prolog.sh
+COPY custom_script/task_epilog.sh /etc/slurm/task_epilog.sh
+COPY custom_script/task_prolog.sh /etc/slurm/task_prolog.sh
+
+# Copy from builder
+COPY --from=builder /app/bin/job_helper /app/bin/node_monitor /usr/local/bin/
 
 # Script
 RUN mkdir /var/log/slurm && \
-    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/check_GPU.sh /etc/slurm/check_CPU.sh
+    chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/task_epilog.sh /etc/slurm/task_prolog.sh /usr/local/bin/job_helper /usr/local/bin/node_monitor
 
 # Set root password
 RUN echo 'root:root' | chpasswd
@@ -36,7 +55,8 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
 
 # Enable service
 COPY systemd_config/slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
-RUN systemctl enable munge dbus.socket slurmd sshd nslcd
+COPY systemd_config/node_monitor.service /etc/systemd/system/node_monitor.service
+RUN systemctl enable munge dbus.socket slurmd sshd nslcd node_monitor
 
 # Use systemd
 CMD ["/usr/sbin/init"]

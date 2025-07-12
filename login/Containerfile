@@ -12,13 +12,15 @@ RUN dnf install -y ohpc-base-compute ohpc-slurm-client \
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
 COPY custom_script/epilog.sh /etc/slurm/epilog.sh
 COPY custom_script/prolog.sh /etc/slurm/prolog.sh
+COPY custom_script/task_epilog.sh /etc/slurm/task_epilog.sh
+COPY custom_script/task_prolog.sh /etc/slurm/task_prolog.sh
 COPY cockpit/cockpit.conf /etc/cockpit/cockpit.conf
 
 # Copy cockpit slurm page
 COPY cockpit/slurm /usr/share/cockpit/slurm
 
 # Script
-RUN chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh
+RUN chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/task_epilog.sh /etc/slurm/task_prolog.sh
 
 # Set root password
 RUN echo 'root:root' | chpasswd

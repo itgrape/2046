@@ -4,7 +4,7 @@
 # =========== 向守护进程注册 ===========
 CPU_CHECKS=30
 MONITOR_INTERVAL=60
-MONITOR_LOG_PATH="${SLURM_SUBMIT_DIR}/monitor-${SLURM_JOB_ID}.log"
+MONITOR_LOG_PATH="${SLURM_SUBMIT_DIR}/prolog-${SLURM_JOB_ID}.log"
 
 HELPER_PATH="/usr/local/bin/job_helper"
 MONITOR_PID_DIR="${HOME}/.monitor"
@@ -29,7 +29,7 @@ echo "[Prolog] Registration successful."
 
 
 # =========== 启动监控进程 ===========
-$HELPER_PATH monitor $MONITOR_INTERVAL &
+nohup $HELPER_PATH monitor $MONITOR_INTERVAL > /tmp/monitor-${SLURM_JOB_ID}.log 2>&1 &
 MONITOR_PID=$!
 mkdir -p "$MONITOR_PID_DIR"
 echo $MONITOR_PID > "$MONITOR_PID_FILE"

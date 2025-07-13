@@ -150,7 +150,7 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 			}
 			jobLogger := log.New(logFile, fmt.Sprintf("JOB-%s: ", msg.JobID), log.LstdFlags)
 
-			jobLogger.Printf("Registering job with GPU-Count: %d, CPU-Count: %d", payload.GpuMonitorCount, payload.CpuMonitorCount)
+			globalLogger.Printf("Registering job %s with GPU-Count: %d, CPU-Count: %d", msg.JobID, payload.GpuMonitorCount, payload.CpuMonitorCount)
 			jt.jobs[msg.JobID] = &JobInfo{
 				LastHeartbeat:   time.Now(),
 				GpuMonitorCount: payload.GpuMonitorCount,
@@ -164,7 +164,7 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 			// 回复客户端
 			_, err = conn.Write([]byte(`{"status": "ok"}\n`))
 			if err != nil {
-				jobLogger.Printf("Error writing OK status to client: %v", err)
+				globalLogger.Printf("Error writing OK status to client for job %s: %v", msg.JobID, err)
 				jt.mu.Unlock()
 				return
 			}
@@ -178,22 +178,21 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 
 			var payload MetricsPayload
 			if err := json.Unmarshal(msg.Payload, &payload); err != nil {
-				job.Logger.Printf("Failed to unmarshal METRICS payload: %v", err)
+				globalLogger.Printf("Failed to unmarshal METRICS payload for job %s: %v", msg.JobID, err)
 				jt.mu.Unlock()
 				continue
 			}
 
 			job.LastHeartbeat = time.Now()
-			job.Logger.Printf("Metrics received: CPU=%.1f%%, GPU=%.1f%%", payload.CpuUtilization, payload.GpuUtilization)
+			globalLogger.Printf("Metrics received: JobID=%s, CPU=%.1f%%, GPU=%.1f%%", msg.JobID, payload.CpuUtilization, payload.GpuUtilization)
 
 			// --- GPU利用率处理 ---
-			if job.GpuMonitorCount > 0 && len(job.GpuUtilizations) < job.GpuMonitorCount {
+			if job.GpuMonitorCount > 0 {
 				job.GpuUtilizations = append(job.GpuUtilizations, payload.GpuUtilization)
-				job.Logger.Printf("Collected GPU metric %d/%d", len(job.GpuUtilizations), job.GpuMonitorCount)
 
-				if len(job.GpuUtilizations) == job.GpuMonitorCount {
+				if len(job.GpuUtilizations) >= job.GpuMonitorCount {
+					job.GpuUtilizations = job.GpuUtilizations[:job.GpuMonitorCount]
 					avgGpu := calculateAverage(job.GpuUtilizations)
-					job.Logger.Printf("GPU monitoring complete. Average GPU utilization: %.2f%%", avgGpu)
 					if avgGpu < GpuUtilizationThreshold {
 						reason := fmt.Sprintf("Average GPU utilization %.2f%% is below threshold %.0f%%", avgGpu, GpuUtilizationThreshold)
 						killSlurmJob(msg.JobID, reason, job.Logger)
@@ -209,13 +208,12 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 				jt.mu.Unlock()
 				return
 			}
-			if job.CpuMonitorCount > 0 && len(job.CpuUtilizations) < job.CpuMonitorCount {
+			if job.CpuMonitorCount > 0 {
 				job.CpuUtilizations = append(job.CpuUtilizations, payload.CpuUtilization)
-				job.Logger.Printf("Collected CPU metric %d/%d", len(job.CpuUtilizations), job.CpuMonitorCount)
 
-				if len(job.CpuUtilizations) == job.CpuMonitorCount {
+				if len(job.CpuUtilizations) >= job.CpuMonitorCount {
+					job.CpuUtilizations = job.CpuUtilizations[:job.CpuMonitorCount]
 					avgCpu := calculateAverage(job.CpuUtilizations)
-					job.Logger.Printf("CPU monitoring complete. Average CPU utilization: %.2f%%", avgCpu)
 					if avgCpu < CpuUtilizationThreshold {
 						reason := fmt.Sprintf("Average CPU utilization %.2f%% is below threshold %.0f%%", avgCpu, CpuUtilizationThreshold)
 						killSlurmJob(msg.JobID, reason, job.Logger)
@@ -252,6 +250,7 @@ func (jt *JobTracker) runStatusChecker() {
 
 func killSlurmJob(jobID, reason string, logger *log.Logger) {
 	logger.Printf("[KILL] Executing 'scancel' for job %s, Reason: %s", jobID, reason)
+	globalLogger.Printf("[KILL] Executing 'scancel' for job %s, Reason: %s", jobID, reason)
 	cmd := exec.Command("scancel", jobID)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

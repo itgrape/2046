@@ -27,7 +27,8 @@ RUN dnf -y groupinstall "Development Tools" && \
                    ohpc-gnu13-runtimes gnu13-compilers-ohpc ohpc-gnu13-perf-tools \ 
                    openblas-gnu13-ohpc netcdf-gnu13-openmpi5-ohpc \
                    ohpc-gnu13-python-libs \
-                   patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran dropbear && \
+                   patch file zstd bzip2 xz python3 gcc-c++ gcc-gfortran \
+                   dropbear at && \
     dnf clean all && \
     rm -rf /var/cache/dnf/*
 
@@ -56,7 +57,7 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
 # Enable service
 COPY systemd_config/slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
 COPY systemd_config/node_monitor.service /etc/systemd/system/node_monitor.service
-RUN systemctl enable munge dbus.socket slurmd sshd nslcd node_monitor
+RUN systemctl enable munge dbus.socket slurmd sshd nslcd node_monitor atd
 
 # Use systemd
 CMD ["/usr/sbin/init"]

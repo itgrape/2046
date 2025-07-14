@@ -16,6 +16,11 @@ import (
 
 const SocketPath = "/var/run/node_monitor.sock"
 
+const (
+	cpuCheckCount   = 30 // CPU检查次数
+	monitorInterval = 60 // 监控间隔（秒）
+)
+
 // Message 定义（与守护进程中的一致）
 type Message struct {
 	Type    string          `json:"type"`
@@ -51,13 +56,13 @@ func main() {
 
 	switch cmd {
 	case "register":
-		if len(os.Args) != 4 {
+		if len(os.Args) != 3 {
 			log.Println("Error: Incorrect number of arguments for 'register'.")
 			printUsageAndExit()
 		}
-		register(jobID, os.Args[2:])
+		register(jobID, os.Args[2])
 	case "monitor":
-		monitor(jobID, os.Args[2:])
+		monitor(jobID)
 	default:
 		log.Printf("Error: Unknown command '%s'.", cmd)
 		printUsageAndExit()
@@ -67,25 +72,17 @@ func main() {
 func printUsageAndExit() {
 	fmt.Fprintf(os.Stderr, "Usage: %s <command> [arguments]\n\n", os.Args[0])
 	fmt.Fprintln(os.Stderr, "Commands:")
-	fmt.Fprintln(os.Stderr, "  register <cpu_count> <log_path>")
+	fmt.Fprintln(os.Stderr, "  register <log_path>")
 	fmt.Fprintln(os.Stderr, "    Registers the job. GPU monitoring count is determined automatically based on card type.")
-	fmt.Fprintln(os.Stderr, "    <cpu_count>: Number of times to check CPU utilization.")
 	fmt.Fprintln(os.Stderr, "    <log_path>: Absolute path for the job's monitoring log file.")
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "  monitor [interval_seconds]")
+	fmt.Fprintln(os.Stderr, "  monitor")
 	fmt.Fprintln(os.Stderr, "    Starts monitoring and sending metrics to the daemon.")
-	fmt.Fprintln(os.Stderr, "    [interval_seconds]: How often to send metrics in seconds. (Default: 60)")
 	fmt.Fprintln(os.Stderr, "")
 	os.Exit(1)
 }
 
-func register(jobID string, args []string) {
-	cpuCount, err := strconv.Atoi(args[0])
-	if err != nil {
-		log.Fatalf("Invalid CPU count: %s. Must be an integer.", args[0])
-	}
-	logPath := args[1]
-
+func register(jobID string, logPath string) {
 	gpuCount := determineGpuCount()
 	log.Printf("Dynamically determined GPU monitoring count: %d", gpuCount)
 
@@ -97,7 +94,7 @@ func register(jobID string, args []string) {
 
 	regPayload := RegisterPayload{
 		GpuMonitorCount: gpuCount,
-		CpuMonitorCount: cpuCount,
+		CpuMonitorCount: cpuCheckCount,
 		LogPath:         logPath,
 	}
 
@@ -116,7 +113,7 @@ func register(jobID string, args []string) {
 		log.Fatalf("Registration failed or confirmation not received. Error: %v, Response: %v", err, resp)
 	}
 
-	log.Printf("Job %s registered successfully. GPU_Count=%d, CPU_Count=%d, Log file: %s", jobID, gpuCount, cpuCount, logPath)
+	log.Printf("Job %s registered successfully. GPU_Count=%d, CPU_Count=%d, Log file: %s", jobID, gpuCount, cpuCheckCount, logPath)
 	os.Exit(0)
 }
 
@@ -199,23 +196,18 @@ func getGpuCountFromScore(score int) int {
 	}
 }
 
-func monitor(jobID string, args []string) {
-	interval := 60 * time.Second
-	if len(args) > 0 {
-		intervalSeconds, err := strconv.Atoi(args[0])
-		if err != nil {
-			log.Fatalf("Invalid interval '%s'. Must be an integer.", args[0])
-		}
-		interval = time.Duration(intervalSeconds) * time.Second
-	}
-	log.Printf("Starting monitoring for job %s, sending metrics every %v.", jobID, interval)
+func monitor(jobID string) {
+	log.Printf("Starting monitoring for job %s, sending metrics every %d seconds.", jobID, monitorInterval)
+
 	conn, err := net.Dial("unix", SocketPath)
 	if err != nil {
 		log.Fatalf("Monitor failed to connect to daemon: %v", err)
 	}
 	defer conn.Close()
-	ticker := time.NewTicker(interval)
+
+	ticker := time.NewTicker(time.Duration(monitorInterval) * time.Second)
 	defer ticker.Stop()
+
 	for range ticker.C {
 		gpuUtil, err := getGpuUtilization()
 		if err != nil {
@@ -234,6 +226,13 @@ func monitor(jobID string, args []string) {
 			log.Fatalf("Failed to send metrics, daemon may have terminated the job or is down. Exiting. Error: %v", err)
 		}
 		log.Printf("Sent metrics: GPU=%.1f%% (max of all cards), CPU=%.1f%%", gpuUtil, cpuUtil)
+
+		// 通过 squeue 命令检查作业是否还是运行状态
+		log.Printf("Checking if job %s is still in squeue...", jobID)
+		if !isJobInSqueue(jobID) {
+			log.Printf("Job %s not found in squeue. Terminating job_helper.", jobID)
+			os.Exit(0)
+		}
 	}
 }
 
@@ -272,4 +271,17 @@ func getCpuUtilization() (float64, error) {
 		return percent[0], nil
 	}
 	return 0, fmt.Errorf("could not retrieve cpu percentage")
+}
+
+// isJobInSqueue 检查作业是否仍在squeue中
+func isJobInSqueue(jobID string) bool {
+	cmd := exec.Command("squeue", "-j", jobID, "--noheader")
+	output, err := cmd.Output()
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {
+			return false
+		}
+		return true // 如果squeue命令失败，假设作业仍在运行
+	}
+	return strings.Contains(string(output), jobID)
 }

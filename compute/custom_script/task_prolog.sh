@@ -14,21 +14,17 @@ PROLOG_LOCK_FILE="${LOCK_DIR}/prolog-${SLURM_JOB_ID}-${NODE_HOSTNAME}.lock"
     # ============= 监控程序系统 ==============
     # =======================================
     (
-        CPU_CHECKS=30
-        MONITOR_INTERVAL=60
-
         HELPER_PATH="/usr/local/bin/job_helper"
         MONITOR_DIR="${HOME}/.monitor"
 
-        MONITOR_PID_FILE="${MONITOR_DIR}/monitor-${SLURM_JOB_ID}-${NODE_HOSTNAME}.pid"
-
+        MONITOR_AT_JOB_FILE="${MONITOR_DIR}/monitor-at-jobid-${SLURM_JOB_ID}-${NODE_HOSTNAME}.txt"
         INFO_LOG_PATH="${SLURM_SUBMIT_DIR}/info-${SLURM_JOB_ID}.log"
 
 
         mkdir -p "$MONITOR_DIR"
 
         # --- 注册任务信息 ---
-        $HELPER_PATH register $CPU_CHECKS $INFO_LOG_PATH
+        $HELPER_PATH register $INFO_LOG_PATH
         if [ $? -ne 0 ]; then
             echo "[Prolog on ${NODE_HOSTNAME}] Error: Job registration with monitoring daemon failed. Aborting."
             exit 1
@@ -36,11 +32,17 @@ PROLOG_LOCK_FILE="${LOCK_DIR}/prolog-${SLURM_JOB_ID}-${NODE_HOSTNAME}.lock"
         echo "[Prolog on ${NODE_HOSTNAME}] Registration successful."
 
 
-        # --- 监控进程 ---
-        nohup $HELPER_PATH monitor $MONITOR_INTERVAL &
-        MONITOR_PID=$!
-        echo $MONITOR_PID > "$MONITOR_PID_FILE"
-        echo "[Prolog on ${NODE_HOSTNAME}] Monitor process started with PID: $MONITOR_PID. PID saved to ${MONITOR_PID_FILE}"
+        # --- 监控进程交给 at 管理 ---
+        AT_JOB_ID=$(echo "$HELPER_PATH monitor" | at now 2>&1 | grep "job" | awk '{print $2}' | tail -n 1)
+
+        if [ -z "$AT_JOB_ID" ]; then
+            echo "[Prolog on ${NODE_HOSTNAME}] Error: Failed to schedule monitor job with 'at'. Aborting."
+            exit 1
+        fi
+
+        echo "$AT_JOB_ID" > "$MONITOR_AT_JOB_FILE"
+        echo "[Prolog on ${NODE_HOSTNAME}] Monitor process scheduled with 'at' job ID: $AT_JOB_ID. Job ID saved to ${MONITOR_AT_JOB_FILE}"
+
     ) >> "${HOME}/.monitor/monitor-${SLURM_JOB_ID}-${NODE_HOSTNAME}.log" 2>&1
 
 

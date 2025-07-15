@@ -107,6 +107,10 @@ func register(jobID string, logPath string) {
 		gpuCheckCount = infiniteCheckCount
 		cpuCheckCount = infiniteCheckCount
 		log.Printf("Detected debug partition: %s. Setting CPU and GPU check count to %d.", jobPartition, infiniteCheckCount)
+	} else if strings.Contains(lowerJobPartition, "gpu") {
+		gpuCheckCount = determineGpuCheckCount()
+		cpuCheckCount = infiniteCheckCount
+		log.Printf("Dynamically determined GPU monitoring count: %d", gpuCheckCount)
 	} else {
 		gpuCheckCount = determineGpuCheckCount()
 		cpuCheckCount = defaultCpuCheckCount

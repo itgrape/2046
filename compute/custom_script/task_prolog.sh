@@ -17,7 +17,6 @@ PROLOG_LOCK_FILE="${LOCK_DIR}/prolog-${SLURM_JOB_ID}-${NODE_HOSTNAME}.lock"
         HELPER_PATH="/usr/local/bin/job_helper"
         MONITOR_DIR="${HOME}/.monitor"
 
-        MONITOR_AT_JOB_FILE="${MONITOR_DIR}/monitor-at-jobid-${SLURM_JOB_ID}-${NODE_HOSTNAME}.txt"
         INFO_LOG_PATH="${SLURM_SUBMIT_DIR}/info-${SLURM_JOB_ID}.log"
 
 
@@ -34,14 +33,7 @@ PROLOG_LOCK_FILE="${LOCK_DIR}/prolog-${SLURM_JOB_ID}-${NODE_HOSTNAME}.lock"
 
         # --- 监控进程交给 at 管理 ---
         AT_JOB_ID=$(echo "$HELPER_PATH monitor" | at now 2>&1 | grep "job" | awk '{print $2}' | tail -n 1)
-
-        if [ -z "$AT_JOB_ID" ]; then
-            echo "[Prolog on ${NODE_HOSTNAME}] Error: Failed to schedule monitor job with 'at'. Aborting."
-            exit 1
-        fi
-
-        echo "$AT_JOB_ID" > "$MONITOR_AT_JOB_FILE"
-        echo "[Prolog on ${NODE_HOSTNAME}] Monitor process scheduled with 'at' job ID: $AT_JOB_ID. Job ID saved to ${MONITOR_AT_JOB_FILE}"
+        echo "[Prolog on ${NODE_HOSTNAME}] Monitor process scheduled with 'at' job ID: $AT_JOB_ID."
 
     ) >> "${HOME}/.monitor/monitor-${SLURM_JOB_ID}-${NODE_HOSTNAME}.log" 2>&1
 
@@ -101,14 +93,13 @@ Host ${LOGIN_NODE_ALIAS}
     User ${USER}
     IdentityFile ~/.ssh/id_rsa
 
-# Block for your GPU Job (Connect through the Login Node)
+# Block for your Job (Connect through the Login Node)
 Host ${COMPUTE_NODE_ALIAS}
     HostName ${NODE_HOSTNAME}
     User ${USER}
     IdentityFile ~/.ssh/id_rsa
     Port ${PORT}
     ProxyJump ${LOGIN_NODE_ALIAS}
-    # Keep the connection alive
     ServerAliveInterval 60
 
 EOF

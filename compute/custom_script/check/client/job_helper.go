@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -17,8 +18,23 @@ import (
 const SocketPath = "/var/run/node_monitor.sock"
 
 const (
-	cpuCheckCount   = 30 // CPU检查次数
 	monitorInterval = 60 // 监控间隔（秒）
+
+	rtx5090CheckCount  = 10
+	rtxA6000CheckCount = 20
+	rtx4090CheckCount  = 20
+	rtx3090CheckCount  = 60
+	rtxA10CheckCount   = 60
+
+	defaultGpuCheckCount = 60
+	defaultCpuCheckCount = 60
+
+	infiniteCheckCount = 144000 // 最大运行 100 天
+)
+
+var (
+	cpuCheckCount = 60 // CPU默认检查次数
+	gpuCheckCount = 60 // GPU默认检查次数
 )
 
 // Message 定义（与守护进程中的一致）
@@ -83,8 +99,19 @@ func printUsageAndExit() {
 }
 
 func register(jobID string, logPath string) {
-	gpuCount := determineGpuCount()
-	log.Printf("Dynamically determined GPU monitoring count: %d", gpuCount)
+	jobPartition := os.Getenv("SLURM_JOB_PARTITION")
+	lowerJobPartition := strings.ToLower(jobPartition)
+
+	// 计算监控次数
+	if strings.Contains(lowerJobPartition, "debug") {
+		gpuCheckCount = infiniteCheckCount
+		cpuCheckCount = infiniteCheckCount
+		log.Printf("Detected debug partition: %s. Setting CPU and GPU check count to %d.", jobPartition, infiniteCheckCount)
+	} else {
+		gpuCheckCount = determineGpuCheckCount()
+		cpuCheckCount = defaultCpuCheckCount
+		log.Printf("Dynamically determined GPU monitoring count: %d", gpuCheckCount)
+	}
 
 	conn, err := net.Dial("unix", SocketPath)
 	if err != nil {
@@ -93,7 +120,7 @@ func register(jobID string, logPath string) {
 	defer conn.Close()
 
 	regPayload := RegisterPayload{
-		GpuMonitorCount: gpuCount,
+		GpuMonitorCount: gpuCheckCount,
 		CpuMonitorCount: cpuCheckCount,
 		LogPath:         logPath,
 	}
@@ -113,28 +140,28 @@ func register(jobID string, logPath string) {
 		log.Fatalf("Registration failed or confirmation not received. Error: %v, Response: %v", err, resp)
 	}
 
-	log.Printf("Job %s registered successfully. GPU_Count=%d, CPU_Count=%d, Log file: %s", jobID, gpuCount, cpuCheckCount, logPath)
+	log.Printf("Job %s registered successfully. GPU_Count=%d, CPU_Count=%d, Log file: %s", jobID, gpuCheckCount, cpuCheckCount, logPath)
 	os.Exit(0)
 }
 
-// determineGpuCount 检查节点上所有GPU并返回最佳的监控次数
-func determineGpuCount() int {
-	bestCardScore := 0
+// determineGpuCheckCount 检查节点上所有GPU并返回最少的监控次数
+func determineGpuCheckCount() int {
+	bestCheckCount := defaultGpuCheckCount
 
 	// 执行nvidia-smi命令获取所有GPU的索引和名称
 	cmd := exec.Command("nvidia-smi", "--query-gpu=index,name", "--format=csv,noheader,nounits")
 	output, err := cmd.Output()
 	if err != nil {
-		log.Printf("Warning: 'nvidia-smi' command failed: %v. Assuming no GPUs or driver issue. Setting GPU count to default.", err)
-		// 在没有GPU或驱动有问题的节点上，返回一个默认的宽松值
-		return getGpuCountFromScore(0)
+		log.Printf("Warning: 'nvidia-smi' command failed: %v. Assuming no GPUs or driver issue. Setting GPU check count to infinite.", err)
+		// 在没有GPU或驱动有问题的节点，直接不监控（返回 infiniteCheckCount）
+		return infiniteCheckCount
 	}
 
 	// 按行解析输出
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(lines) == 0 || (len(lines) == 1 && lines[0] == "") {
-		log.Println("No GPUs detected by nvidia-smi. Setting GPU count to default.")
-		return getGpuCountFromScore(0)
+		log.Println("No GPUs detected by nvidia-smi. Setting GPU check count to infinite.")
+		return infiniteCheckCount
 	}
 
 	for _, line := range lines {
@@ -143,61 +170,43 @@ func determineGpuCount() int {
 			continue
 		}
 		gpuIndex := strings.TrimSpace(parts[0])
-		gpuName := strings.TrimSpace(parts[1])
+		gpuName := strings.ToUpper(strings.TrimSpace(parts[1]))
 
-		currentCardScore := getGpuScore(gpuName)
-		log.Printf("  - Detected GPU %s: %s, Score: %d", gpuIndex, gpuName, currentCardScore)
+		currentCheckCount := getGpuCheckCount(gpuName)
+		log.Printf("  - Detected GPU %s: %s", gpuIndex, gpuName)
 
-		if currentCardScore > bestCardScore {
-			bestCardScore = currentCardScore
+		if bestCheckCount > currentCheckCount {
+			bestCheckCount = currentCheckCount
 		}
 	}
 
-	finalCount := getGpuCountFromScore(bestCardScore)
-	log.Printf("Best card score found on this node: %d. Setting monitoring count to: %d", bestCardScore, finalCount)
-	return finalCount
+	log.Printf("Setting monitoring count to: %d", bestCheckCount)
+	return bestCheckCount
 }
 
-// getGpuScore 根据GPU名称返回一个分数
-func getGpuScore(gpuName string) int {
+// getGpuCheckCount 根据GPU名称返回一个监控次数
+func getGpuCheckCount(gpuName string) int {
 	switch {
 	case strings.Contains(gpuName, "5090"):
-		return 100
+		return rtx5090CheckCount
 	case strings.Contains(gpuName, "A6000"):
-		return 90
+		return rtxA6000CheckCount
 	case strings.Contains(gpuName, "4090"):
-		return 80
+		return rtx4090CheckCount
 	case strings.Contains(gpuName, "3090"):
-		return 70
+		return rtx3090CheckCount
 	case strings.Contains(gpuName, "A10"):
-		return 50
+		return rtxA10CheckCount
 	default:
-		return 10
-	}
-}
-
-// getGpuCountFromScore 根据分数返回监控次数
-func getGpuCountFromScore(score int) int {
-	switch score {
-	case 100:
-		return 10
-	case 90:
-		return 20
-	case 80:
-		return 30
-	case 70:
-		return 120
-	case 50:
-		return 420
-	case 0:
-		return 10086 // 没有卡
-	default:
-		return 600 // 有卡，但非上述列出来的卡
+		return defaultGpuCheckCount
 	}
 }
 
 func monitor(jobID string) {
-	log.Printf("Starting monitoring for job %s, sending metrics every %d seconds.", jobID, monitorInterval)
+	if err := writePidFile(jobID); err != nil {
+		log.Fatalf("Failed to write PID file: %v", err)
+		os.Exit(1)
+	}
 
 	conn, err := net.Dial("unix", SocketPath)
 	if err != nil {
@@ -207,6 +216,8 @@ func monitor(jobID string) {
 
 	ticker := time.NewTicker(time.Duration(monitorInterval) * time.Second)
 	defer ticker.Stop()
+
+	log.Printf("Starting monitoring for job %s, sending metrics every %d seconds.", jobID, monitorInterval)
 
 	for range ticker.C {
 		gpuUtil, err := getGpuUtilization()
@@ -226,17 +237,10 @@ func monitor(jobID string) {
 			log.Fatalf("Failed to send metrics, daemon may have terminated the job or is down. Exiting. Error: %v", err)
 		}
 		log.Printf("Sent metrics: GPU=%.1f%% (max of all cards), CPU=%.1f%%", gpuUtil, cpuUtil)
-
-		// 通过 squeue 命令检查作业是否还是运行状态
-		log.Printf("Checking if job %s is still in squeue...", jobID)
-		if !isJobInSqueue(jobID) {
-			log.Printf("Job %s not found in squeue. Terminating job_helper.", jobID)
-			os.Exit(0)
-		}
 	}
 }
 
-// getGpuUtilization 获取所有GPU中的最高利用率
+// getGpuUtilization 获取所有GPU的平均利用率
 func getGpuUtilization() (float64, error) {
 	cmd := exec.Command("nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits")
 	output, err := cmd.Output()
@@ -245,7 +249,8 @@ func getGpuUtilization() (float64, error) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	var maxUtil float64 = 0.0
+	var totalUtil float64 = 0.0
+	var gpuCount int = 0
 
 	for _, line := range lines {
 		utilStr := strings.TrimSpace(line)
@@ -254,12 +259,14 @@ func getGpuUtilization() (float64, error) {
 			// 忽略无法解析的行
 			continue
 		}
-		if util > maxUtil {
-			maxUtil = util
-		}
+		totalUtil += util
+		gpuCount++
 	}
 
-	return maxUtil, nil
+	if gpuCount == 0 {
+		return 0, fmt.Errorf("no valid GPU utilization data found")
+	}
+	return totalUtil / float64(gpuCount), nil
 }
 
 func getCpuUtilization() (float64, error) {
@@ -273,15 +280,29 @@ func getCpuUtilization() (float64, error) {
 	return 0, fmt.Errorf("could not retrieve cpu percentage")
 }
 
-// isJobInSqueue 检查作业是否仍在squeue中
-func isJobInSqueue(jobID string) bool {
-	cmd := exec.Command("squeue", "-j", jobID, "--noheader")
-	output, err := cmd.Output()
+// writePidFile 写入当前进程的PID到指定文件
+func writePidFile(jobID string) error {
+	pid := os.Getpid()
+
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {
-			return false
-		}
-		return true // 如果squeue命令失败，假设作业仍在运行
+		return fmt.Errorf("failed to get home directory: %w", err)
 	}
-	return strings.Contains(string(output), jobID)
+	pidDir := filepath.Join(homeDir, ".monitor")
+	if err := os.MkdirAll(pidDir, 0755); err != nil {
+		return fmt.Errorf("failed to create PID directory: %w", err)
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return fmt.Errorf("failed to get hostname: %w", err)
+	}
+	pidFile := filepath.Join(pidDir, fmt.Sprintf("monitor-%s-%s.pid", jobID, hostname))
+
+	if err := os.WriteFile(pidFile, []byte(strconv.Itoa(pid)), 0644); err != nil {
+		return fmt.Errorf("failed to write PID file: %w", err)
+	}
+	log.Printf("PID file written to %s", pidFile)
+
+	return nil
 }

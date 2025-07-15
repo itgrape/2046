@@ -15,7 +15,7 @@ import (
 const (
 	SocketPath              = "/var/run/node_monitor.sock"
 	HeartbeatTimeout        = 180 * time.Second
-	CheckInterval           = 60 * time.Second
+	HeartbeatCheckInterval  = 60 * time.Second
 	GpuUtilizationThreshold = 70.0
 	CpuUtilizationThreshold = 50.0
 )
@@ -51,7 +51,7 @@ type Message struct {
 type RegisterPayload struct {
 	GpuMonitorCount int    `json:"gpu_monitor_count"`
 	CpuMonitorCount int    `json:"cpu_monitor_count"`
-	LogPath         string `json:"log_path"` // 新增：作业日志文件路径
+	LogPath         string `json:"log_path"`
 }
 
 // MetricsPayload 定义了 METRICS 消息的具体内容
@@ -93,7 +93,6 @@ func main() {
 	globalLogger.Printf("Set socket %s permissions to 0777", SocketPath)
 
 	globalLogger.Printf("Listening on %s", SocketPath)
-
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -190,8 +189,12 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 			if job.GpuMonitorCount > 0 {
 				job.GpuUtilizations = append(job.GpuUtilizations, payload.GpuUtilization)
 
-				if len(job.GpuUtilizations) >= job.GpuMonitorCount {
-					job.GpuUtilizations = job.GpuUtilizations[:job.GpuMonitorCount]
+				// 滑动窗口技术，如果数据点超过了窗口大小，就从头部移除最旧的数据
+				for len(job.GpuUtilizations) > job.GpuMonitorCount {
+					job.GpuUtilizations = job.GpuUtilizations[1:]
+				}
+
+				if len(job.GpuUtilizations) == job.GpuMonitorCount {
 					avgGpu := calculateAverage(job.GpuUtilizations)
 					if avgGpu < GpuUtilizationThreshold {
 						reason := fmt.Sprintf("Average GPU utilization %.2f%% is below threshold %.0f%%", avgGpu, GpuUtilizationThreshold)
@@ -203,16 +206,20 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 				}
 			}
 
-			// --- CPU利用率处理 ---
+			// 确保作业还是存在的（没有因为 GPU 或心跳超时被移除）
 			if _, ok := jt.jobs[msg.JobID]; !ok {
 				jt.mu.Unlock()
 				return
 			}
+
+			// --- CPU利用率处理 ---
 			if job.CpuMonitorCount > 0 {
 				job.CpuUtilizations = append(job.CpuUtilizations, payload.CpuUtilization)
+				for len(job.CpuUtilizations) > job.CpuMonitorCount {
+					job.CpuUtilizations = job.CpuUtilizations[1:]
+				}
 
-				if len(job.CpuUtilizations) >= job.CpuMonitorCount {
-					job.CpuUtilizations = job.CpuUtilizations[:job.CpuMonitorCount]
+				if len(job.CpuUtilizations) == job.CpuMonitorCount {
 					avgCpu := calculateAverage(job.CpuUtilizations)
 					if avgCpu < CpuUtilizationThreshold {
 						reason := fmt.Sprintf("Average CPU utilization %.2f%% is below threshold %.0f%%", avgCpu, CpuUtilizationThreshold)
@@ -229,7 +236,7 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 }
 
 func (jt *JobTracker) runStatusChecker() {
-	ticker := time.NewTicker(CheckInterval)
+	ticker := time.NewTicker(HeartbeatCheckInterval)
 	defer ticker.Stop()
 
 	for range ticker.C {
@@ -251,6 +258,7 @@ func (jt *JobTracker) runStatusChecker() {
 func killSlurmJob(jobID, reason string, logger *log.Logger) {
 	logger.Printf("[KILL] Executing 'scancel' for job %s, Reason: %s", jobID, reason)
 	globalLogger.Printf("[KILL] Executing 'scancel' for job %s, Reason: %s", jobID, reason)
+
 	cmd := exec.Command("scancel", jobID)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

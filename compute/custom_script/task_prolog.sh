@@ -3,7 +3,7 @@
 NODE_HOSTNAME=$(hostname)
 
 # 设置锁文件，防止程序多次执行
-LOCK_DIR="/tmp/slurm_locks"
+LOCK_DIR="/tmp/slurm_locks_${USER}"
 mkdir -p "$LOCK_DIR"
 PROLOG_LOCK_FILE="${LOCK_DIR}/prolog-${SLURM_JOB_ID}-${NODE_HOSTNAME}.lock"
 
@@ -13,14 +13,11 @@ PROLOG_LOCK_FILE="${LOCK_DIR}/prolog-${SLURM_JOB_ID}-${NODE_HOSTNAME}.lock"
     # =======================================
     # ============= 监控程序系统 ==============
     # =======================================
+    MONITOR_DIR="${HOME}/.monitor"
+    mkdir -p "$MONITOR_DIR"
     (
         HELPER_PATH="/usr/local/bin/job_helper"
-        MONITOR_DIR="${HOME}/.monitor"
-
         INFO_LOG_PATH="${SLURM_SUBMIT_DIR}/info-${SLURM_JOB_ID}.log"
-
-
-        mkdir -p "$MONITOR_DIR"
 
         # --- 注册任务信息 ---
         $HELPER_PATH register $INFO_LOG_PATH
@@ -29,7 +26,6 @@ PROLOG_LOCK_FILE="${LOCK_DIR}/prolog-${SLURM_JOB_ID}-${NODE_HOSTNAME}.lock"
             exit 1
         fi
         echo "[Prolog on ${NODE_HOSTNAME}] Registration successful."
-
 
         # --- 监控进程交给 at 管理 ---
         AT_JOB_ID=$(echo "$HELPER_PATH monitor" | at now 2>&1 | grep "job" | awk '{print $2}' | tail -n 1)

@@ -23,6 +23,7 @@ RUN touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && 
 
 # Slurmrestd service
 RUN useradd -M -r -s /usr/sbin/nologin -U slurmrestd && \
+    mkdir -p /var/spool/slurm/statesave && \
     dd if=/dev/random of=/var/spool/slurm/statesave/jwt_hs256.key bs=32 count=1 && \
     chown slurm:slurm /var/spool/slurm/statesave/jwt_hs256.key && \
     chmod 0600 /var/spool/slurm/statesave/jwt_hs256.key && \

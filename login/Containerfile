@@ -1,3 +1,19 @@
+FROM node:24-alpine AS builder-frontend
+WORKDIR /app/frontend
+COPY dashboard/frontend/package*.json ./
+RUN npm install
+COPY dashboard/frontend/ ./
+RUN npm run build
+
+FROM golang:1.24-alpine AS builder-backend
+WORKDIR /app/backend
+COPY dashboard/backend/go.* ./
+RUN go mod download
+COPY dashboard/backend/ ./
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/server .
+
+
+
 FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:base
 LABEL maintainer="pushihao@njust.edu.cn"
 
@@ -16,8 +32,9 @@ COPY custom_script/task_epilog.sh /etc/slurm/task_epilog.sh
 COPY custom_script/task_prolog.sh /etc/slurm/task_prolog.sh
 COPY cockpit/cockpit.conf /etc/cockpit/cockpit.conf
 
-# Copy cockpit slurm page
-COPY cockpit/slurm /usr/share/cockpit/slurm
+# Copy dashboard
+COPY --from=builder-backend /app/server /usr/local/dashboard/server
+COPY --from=builder-frontend /app/frontend/dist /usr/local/dashboard/static
 
 # Script
 RUN chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/task_epilog.sh /etc/slurm/task_prolog.sh
@@ -31,7 +48,8 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
 
 # Enable service
 COPY systemd_config/slurmd_override.conf /etc/systemd/system/slurmd.service.d/override.conf
-RUN systemctl enable munge dbus.socket slurmd sshd nslcd cockpit.socket
+COPY systemd_config/dashboard.service /etc/systemd/system/dashboard.service
+RUN systemctl enable munge dbus.socket slurmd sshd nslcd cockpit.socket dashboard
 
 # Use systemd
 CMD ["/usr/sbin/init"]

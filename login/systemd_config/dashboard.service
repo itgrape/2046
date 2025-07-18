@@ -1,0 +1,15 @@
+[Unit]
+Description=Dashboard use slurm rest api
+After=network.target
+
+[Service]
+ExecStart=/usr/local/dashboard/server
+User=root
+Group=root
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

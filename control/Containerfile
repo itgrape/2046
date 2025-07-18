@@ -2,7 +2,7 @@ FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:ba
 LABEL maintainer="pushihao@njust.edu.cn"
 
 # Base install
-RUN dnf install -y ohpc-slurm-server && \
+RUN dnf install -y ohpc-slurm-server slurm-ohpc-slurmrestd && \
     dnf clean all && \
     rm -rf /var/cache/dnf/*
 
@@ -21,6 +21,14 @@ RUN touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && 
     chmod +x /usr/local/bin/mail_wrapper.sh && \
     chown slurm:slurm /etc/slurm/slurmdbd.conf && chmod 600 /etc/slurm/slurmdbd.conf
 
+# Slurmrestd service
+RUN useradd -M -r -s /usr/sbin/nologin -U slurmrestd && \
+    dd if=/dev/random of=/var/spool/slurm/statesave/jwt_hs256.key bs=32 count=1 && \
+    chown slurm:slurm /var/spool/slurm/statesave/jwt_hs256.key && \
+    chmod 0600 /var/spool/slurm/statesave/jwt_hs256.key && \
+    chown slurm:slurm /var/spool/slurm/statesave && \
+    chmod 0755 /var/spool/slurm/statesave
+
 # Set root password
 RUN echo 'root:root' | chpasswd
 
@@ -31,7 +39,8 @@ RUN echo "rm -f /var/run/nologin" >> /etc/rc.local && \
 # Enable service
 COPY systemd_config/slurmctld_override.conf /etc/systemd/system/slurmctld.service.d/override.conf
 COPY systemd_config/slurmdbd_override.conf /etc/systemd/system/slurmdbd.service.d/override.conf
-RUN systemctl enable munge slurmctld slurmdbd sshd nslcd
+COPY systemd_config/slurmrestd_override.conf /etc/systemd/system/slurmrestd.service.d/override.conf
+RUN systemctl enable munge slurmctld slurmdbd slurmrestd sshd nslcd
 
 # Use systemd
 CMD ["/usr/sbin/init"]

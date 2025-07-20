@@ -1,15 +1,17 @@
 FROM node:24-alpine AS builder-frontend
-WORKDIR /app/frontend
-COPY dashboard/frontend/package*.json ./
+WORKDIR /app
+RUN apk add --no-cache git
+RUN git clone https://github.com/itgrape/slurm-dashboard.git .
+WORKDIR /app/slurm-dashboard/frontend
 RUN npm install
-COPY dashboard/frontend/ ./
 RUN npm run build
 
 FROM golang:1.24-alpine AS builder-backend
-WORKDIR /app/backend
-COPY dashboard/backend/go.* ./
+WORKDIR /app
+RUN apk add --no-cache git
+RUN git clone https://github.com/itgrape/slurm-dashboard.git .
+WORKDIR /app/slurm-dashboard/backend
 RUN go mod download
-COPY dashboard/backend/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/server ./cmd/server
 
 
@@ -34,7 +36,7 @@ COPY cockpit/cockpit.conf /etc/cockpit/cockpit.conf
 
 # Copy dashboard
 COPY --from=builder-backend /app/server /usr/local/dashboard/server
-COPY --from=builder-frontend /app/frontend/dist /usr/local/dashboard/static
+COPY --from=builder-frontend /app/slurm-dashboard/frontend/dist /usr/local/dashboard/static
 
 # Script
 RUN chmod +x /etc/slurm/prolog.sh /etc/slurm/epilog.sh /etc/slurm/task_epilog.sh /etc/slurm/task_prolog.sh

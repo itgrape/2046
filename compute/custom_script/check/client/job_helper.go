@@ -53,8 +53,9 @@ type RegisterPayload struct {
 
 // MetricsPayload 定义（与守护进程中的一致）
 type MetricsPayload struct {
-	GpuUtilization float64 `json:"gpu_utilization"`
-	CpuUtilization float64 `json:"cpu_utilization"`
+	GpuUtilization       float64 `json:"gpu_utilization"`
+	GpuMemoryUtilization float64 `json:"gpu_memory_utilization"`
+	CpuUtilization       float64 `json:"cpu_utilization"`
 }
 
 func main() {
@@ -228,19 +229,28 @@ func monitor(jobID string) {
 		if err != nil {
 			log.Printf("Warning: could not get GPU utilization: %v", err)
 		}
+
+		gpuMemUtil, err := getGpuMemoryUtilization()
+		if err != nil {
+			log.Printf("Warning: could not get GPU memory utilization: %v", err)
+		}
+
 		cpuUtil, err := getCpuUtilization()
 		if err != nil {
 			log.Printf("Warning: could not get CPU utilization: %v", err)
 		}
+
 		payload, _ := json.Marshal(MetricsPayload{
-			GpuUtilization: gpuUtil,
-			CpuUtilization: cpuUtil,
+			GpuUtilization:       gpuUtil,
+			GpuMemoryUtilization: gpuMemUtil,
+			CpuUtilization:       cpuUtil,
 		})
 		msg := Message{Type: "METRICS", JobID: jobID, Payload: payload}
 		if err := json.NewEncoder(conn).Encode(msg); err != nil {
 			log.Fatalf("Failed to send metrics, daemon may have terminated the job or is down. Exiting. Error: %v", err)
 		}
-		log.Printf("Sent metrics: GPU=%.1f%% (max of all cards), CPU=%.1f%%", gpuUtil, cpuUtil)
+
+		log.Printf("Sent metrics: GPU_Util=%.1f%%, GPU_Mem=%.1f%%, CPU_Util=%.1f%%", gpuUtil, gpuMemUtil, cpuUtil)
 	}
 }
 
@@ -269,6 +279,37 @@ func getGpuUtilization() (float64, error) {
 
 	if gpuCount == 0 {
 		return 0, fmt.Errorf("no valid GPU utilization data found")
+	}
+	return totalUtil / float64(gpuCount), nil
+}
+
+// getGpuMemoryUtilization 获取所有GPU的平均内存利用率
+func getGpuMemoryUtilization() (float64, error) {
+	cmd := exec.Command("nvidia-smi", "--query-gpu=utilization.memory", "--format=csv,noheader,nounits")
+	output, err := cmd.Output()
+	if err != nil {
+		return 0, fmt.Errorf("nvidia-smi command failed for memory utilization: %w", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	var totalUtil float64 = 0.0
+	var gpuCount int = 0
+
+	for _, line := range lines {
+		utilStr := strings.TrimSpace(line)
+		if utilStr == "" {
+			continue
+		}
+		util, err := strconv.ParseFloat(utilStr, 64)
+		if err != nil {
+			continue
+		}
+		totalUtil += util
+		gpuCount++
+	}
+
+	if gpuCount == 0 {
+		return 0, fmt.Errorf("no valid GPU memory utilization data found")
 	}
 	return totalUtil / float64(gpuCount), nil
 }

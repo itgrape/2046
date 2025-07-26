@@ -51,3 +51,10 @@ fi
 echo "[Epilog on ${NODE_HOSTNAME}] Cleanup finished."
 
 exit 0
+
+
+# ========================================
+# ============== 清理日志文件 ==============
+# ========================================
+echo "rm -rf ${HOME}/.slurm/connect-${SLURM_JOB_ID}.log" | at now + 1 hour
+echo "rm -rf ${HOME}/.slurm/info-${SLURM_JOB_ID}.log" | at now + 7 day

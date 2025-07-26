@@ -13,25 +13,29 @@ import (
 )
 
 const (
-	SocketPath              = "/var/run/node_monitor.sock"
-	HeartbeatTimeout        = 180 * time.Second
-	HeartbeatCheckInterval  = 60 * time.Second
-	GpuUtilizationThreshold = 70.0
-	CpuUtilizationThreshold = 50.0
+	SocketPath                    = "/var/run/node_monitor.sock"
+	HeartbeatTimeout              = 180 * time.Second
+	HeartbeatCheckInterval        = 60 * time.Second
+	GpuUtilizationThreshold       = 70.0
+	GpuMemoryUtilizationThreshold = 30.0
+	CpuUtilizationThreshold       = 50.0
+	BufferPeriod                  = 20 // 丢弃前 20 分钟的使用率数据
 )
 
 var globalLogger *log.Logger
 
 // JobInfo 存储每个被监控作业的详细信息
 type JobInfo struct {
-	LastHeartbeat   time.Time
-	GpuMonitorCount int
-	CpuMonitorCount int
-	GpuUtilizations []float64
-	CpuUtilizations []float64
-	LogPath         string      // 作业日志文件的路径
-	Logger          *log.Logger // 此作业专用的logger
-	LogFile         *os.File    // 日志文件句柄，用于最后关闭
+	LastHeartbeat         time.Time
+	GpuMonitorCount       int
+	CpuMonitorCount       int
+	GpuUtilizations       []float64
+	GpuMemoryUtilizations []float64
+	CpuUtilizations       []float64
+	LogPath               string      // 作业日志文件的路径
+	Logger                *log.Logger // 此作业专用的logger
+	LogFile               *os.File    // 日志文件句柄，用于最后关闭
+	MetricsReceived       int         // 记录已接收到的指标数量
 }
 
 // JobTracker 安全地管理所有在本机运行的作业
@@ -56,8 +60,9 @@ type RegisterPayload struct {
 
 // MetricsPayload 定义了 METRICS 消息的具体内容
 type MetricsPayload struct {
-	GpuUtilization float64 `json:"gpu_utilization"`
-	CpuUtilization float64 `json:"cpu_utilization"`
+	GpuUtilization       float64 `json:"gpu_utilization"`
+	GpuMemoryUtilization float64 `json:"gpu_memory_utilization"`
+	CpuUtilization       float64 `json:"cpu_utilization"`
 }
 
 func main() {
@@ -151,14 +156,15 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 
 			globalLogger.Printf("Registering job %s with GPU-Count: %d, CPU-Count: %d", msg.JobID, payload.GpuMonitorCount, payload.CpuMonitorCount)
 			jt.jobs[msg.JobID] = &JobInfo{
-				LastHeartbeat:   time.Now(),
-				GpuMonitorCount: payload.GpuMonitorCount,
-				CpuMonitorCount: payload.CpuMonitorCount,
-				GpuUtilizations: make([]float64, 0, payload.GpuMonitorCount),
-				CpuUtilizations: make([]float64, 0, payload.CpuMonitorCount),
-				LogPath:         payload.LogPath,
-				Logger:          jobLogger,
-				LogFile:         logFile,
+				LastHeartbeat:         time.Now(),
+				GpuMonitorCount:       payload.GpuMonitorCount,
+				CpuMonitorCount:       payload.CpuMonitorCount,
+				GpuUtilizations:       make([]float64, 0, payload.GpuMonitorCount),
+				GpuMemoryUtilizations: make([]float64, 0, payload.GpuMonitorCount),
+				CpuUtilizations:       make([]float64, 0, payload.CpuMonitorCount),
+				LogPath:               payload.LogPath,
+				Logger:                jobLogger,
+				LogFile:               logFile,
 			}
 			// 回复客户端
 			_, err = conn.Write([]byte(`{"status": "ok"}\n`))
@@ -183,7 +189,15 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 			}
 
 			job.LastHeartbeat = time.Now()
-			globalLogger.Printf("Metrics received: JobID=%s, CPU=%.1f%%, GPU=%.1f%%", msg.JobID, payload.CpuUtilization, payload.GpuUtilization)
+			job.MetricsReceived++
+			globalLogger.Printf("Metrics received: JobID=%s, CPU=%.1f%%, GPU_Util=%.1f%%, GPU_Mem=%.1f%%", msg.JobID, payload.CpuUtilization, payload.GpuUtilization, payload.GpuMemoryUtilization)
+
+			// 检查是否已过缓冲期
+			if job.MetricsReceived <= BufferPeriod {
+				job.Logger.Printf("Discarding metrics during buffer period (Received: %d, Buffer: %d)", job.MetricsReceived, BufferPeriod)
+				jt.mu.Unlock()
+				continue
+			}
 
 			// --- GPU利用率处理 ---
 			if job.GpuMonitorCount > 0 {
@@ -204,6 +218,36 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 						return
 					}
 				}
+			}
+
+			// 确保作业还是存在的（没有因为 GPU 或心跳超时被移除）
+			if _, ok := jt.jobs[msg.JobID]; !ok {
+				jt.mu.Unlock()
+				return
+			}
+
+			// --- GPU 内存利用率处理 ---
+			if job.GpuMonitorCount > 0 {
+				job.GpuMemoryUtilizations = append(job.GpuMemoryUtilizations, payload.GpuMemoryUtilization)
+				for len(job.GpuMemoryUtilizations) > job.GpuMonitorCount {
+					job.GpuMemoryUtilizations = job.GpuMemoryUtilizations[1:]
+				}
+
+				if len(job.GpuMemoryUtilizations) == job.GpuMonitorCount {
+					avgGpuMem := calculateAverage(job.GpuMemoryUtilizations)
+					if avgGpuMem < GpuMemoryUtilizationThreshold {
+						reason := fmt.Sprintf("Average GPU Memory utilization %.2f%% is below threshold %.0f%%", avgGpuMem, GpuMemoryUtilizationThreshold)
+						killSlurmJob(msg.JobID, reason, job.Logger)
+						jt.removeJob(msg.JobID, reason)
+						jt.mu.Unlock()
+						return
+					}
+				}
+			}
+
+			if _, ok := jt.jobs[msg.JobID]; !ok {
+				jt.mu.Unlock()
+				return
 			}
 
 			// 确保作业还是存在的（没有因为 GPU 或心跳超时被移除）

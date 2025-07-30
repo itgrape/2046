@@ -15,7 +15,7 @@ RUN apk add --no-cache git
 RUN git clone https://github.com/itgrape/slurm-dashboard.git .
 WORKDIR /app/backend
 RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/server ./cmd/server
+RUN go build -o /app/server ./cmd/server
 
 
 #--------------------- 最终镜像阶段 ---------------------#

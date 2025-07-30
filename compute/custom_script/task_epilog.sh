@@ -4,6 +4,11 @@ NODE_HOSTNAME=$(hostname)
 
 echo "[Epilog on ${NODE_HOSTNAME}] Cleaning up job processes..."
 
+# =======================================
+# =============== 注销任务 ===============
+# =======================================
+HELPER_PATH="/usr/local/bin/job_helper"
+$HELPER_PATH cancel
 
 # =======================================
 # ============= 清理监控进程 ==============
@@ -15,7 +20,7 @@ if [ -f "$MONITOR_PID_FILE" ]; then
     if [ -n "$MONITOR_PID" ] && ps -p "$MONITOR_PID" > /dev/null; then
         echo "[Epilog on ${NODE_HOSTNAME}] Stopping monitor process with PID ${MONITOR_PID}."
         kill "$MONITOR_PID"
-        sleep 2
+        sleep 1
         # Force kill if it's still running
         if ps -p "$MONITOR_PID" > /dev/null; then
             kill -9 "$MONITOR_PID"
@@ -37,7 +42,7 @@ if [ -f "$DROPBEAR_PID_FILE" ]; then
     if [ -n "$DROPBEAR_PID" ] && ps -p "$DROPBEAR_PID" > /dev/null; then
         echo "[Epilog on ${NODE_HOSTNAME}] Stopping Dropbear process with PID ${DROPBEAR_PID}."
         kill "$DROPBEAR_PID"
-        sleep 2
+        sleep 1
         # Force kill if it's still running
         if ps -p "$DROPBEAR_PID" > /dev/null; then
             kill -9 "$DROPBEAR_PID"

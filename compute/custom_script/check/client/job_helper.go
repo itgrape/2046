@@ -80,6 +80,8 @@ func main() {
 		register(jobID, os.Args[2])
 	case "monitor":
 		monitor(jobID)
+	case "cancel":
+		cancel(jobID)
 	default:
 		log.Printf("Error: Unknown command '%s'.", cmd)
 		printUsageAndExit()
@@ -96,7 +98,31 @@ func printUsageAndExit() {
 	fmt.Fprintln(os.Stderr, "  monitor")
 	fmt.Fprintln(os.Stderr, "    Starts monitoring and sending metrics to the daemon.")
 	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "  cancel")
+	fmt.Fprintln(os.Stderr, "    Notifies the daemon to deregister the job, typically used when the job is finished or cancelled.")
+	fmt.Fprintln(os.Stderr, "")
 	os.Exit(1)
+}
+
+// ## 用于发送注销请求
+func cancel(jobID string) {
+	conn, err := net.Dial("unix", SocketPath)
+	if err != nil {
+		// 如果守护进程已关闭，注销失败是正常情况，只记录警告不中断程序
+		log.Printf("Warning: Could not connect to node monitor daemon to cancel job %s: %v. The daemon might be down.", jobID, err)
+		os.Exit(0)
+	}
+	defer conn.Close()
+
+	// 构造CANCEL消息，此消息不需要Payload
+	msg := Message{Type: "CANCEL", JobID: jobID}
+	if err := json.NewEncoder(conn).Encode(msg); err != nil {
+		log.Printf("Warning: Failed to send cancellation request for job %s: %v", jobID, err)
+		os.Exit(0)
+	}
+
+	log.Printf("Successfully sent cancellation request for job %s.", jobID)
+	os.Exit(0)
 }
 
 func register(jobID string, logPath string) {

@@ -108,7 +108,7 @@ func main() {
 	}
 }
 
-// removeJob 安全地移除一个作业并关闭其日志文件
+// removeJob 安全地移除一个作业并关闭其日志文件。此函数必须在持有锁的情况下调用。
 func (jt *JobTracker) removeJob(jobID string, reason string) {
 	if job, ok := jt.jobs[jobID]; ok {
 		job.Logger.Printf("Removing job %s. Reason: %s", jobID, reason)
@@ -126,13 +126,13 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 	for {
 		var msg Message
 		if err := decoder.Decode(&msg); err != nil {
+			// 连接断开或解码错误
 			return
 		}
 
-		jt.mu.Lock()
-
 		switch msg.Type {
 		case "REGISTER":
+			jt.mu.Lock()
 			var payload RegisterPayload
 			if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 				globalLogger.Printf("Failed to unmarshal REGISTER payload for job %s: %v", msg.JobID, err)
@@ -145,7 +145,6 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 				continue
 			}
 
-			// 为此作业创建日志文件和logger
 			logFile, err := os.OpenFile(payload.LogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				globalLogger.Printf("Failed to open log file %s for job %s: %v", payload.LogPath, msg.JobID, err)
@@ -166,24 +165,26 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 				Logger:                jobLogger,
 				LogFile:               logFile,
 			}
+			jt.mu.Unlock() // 在网络写入前释放锁
+
 			// 回复客户端
-			_, err = conn.Write([]byte(`{"status": "ok"}\n`))
-			if err != nil {
+			if _, err := conn.Write([]byte(`{"status": "ok"}\n`)); err != nil {
 				globalLogger.Printf("Error writing OK status to client for job %s: %v", msg.JobID, err)
-				jt.mu.Unlock()
 				return
 			}
 
 		case "METRICS":
-			job, jobExists := jt.jobs[msg.JobID]
-			if !jobExists {
-				jt.mu.Unlock()
-				continue
-			}
-
 			var payload MetricsPayload
 			if err := json.Unmarshal(msg.Payload, &payload); err != nil {
 				globalLogger.Printf("Failed to unmarshal METRICS payload for job %s: %v", msg.JobID, err)
+				continue
+			}
+
+			var jobToKillID, reason string
+
+			jt.mu.Lock()
+			job, jobExists := jt.jobs[msg.JobID]
+			if !jobExists {
 				jt.mu.Unlock()
 				continue
 			}
@@ -192,90 +193,79 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 			job.MetricsReceived++
 			globalLogger.Printf("Metrics received: JobID=%s, CPU=%.1f%%, GPU_Util=%.1f%%, GPU_Mem=%.1f%%", msg.JobID, payload.CpuUtilization, payload.GpuUtilization, payload.GpuMemoryUtilization)
 
-			// 检查是否已过缓冲期
 			if job.MetricsReceived <= BufferPeriod {
-				job.Logger.Printf("Discarding metrics during buffer period (Received: %d, Buffer: %d)", job.MetricsReceived, BufferPeriod)
+				globalLogger.Printf("Discarding metrics during buffer period for job %s (Received: %d, Buffer: %d)", msg.JobID, job.MetricsReceived, BufferPeriod)
 				jt.mu.Unlock()
 				continue
 			}
 
-			// --- GPU利用率处理 ---
-			if job.GpuMonitorCount > 0 {
+			// --- 检查所有指标，决定是否终止作业 ---
+			// GPU 利用率
+			if job.GpuMonitorCount > 0 && reason == "" {
 				job.GpuUtilizations = append(job.GpuUtilizations, payload.GpuUtilization)
-
-				// 滑动窗口技术，如果数据点超过了窗口大小，就从头部移除最旧的数据
 				for len(job.GpuUtilizations) > job.GpuMonitorCount {
 					job.GpuUtilizations = job.GpuUtilizations[1:]
 				}
-
 				if len(job.GpuUtilizations) == job.GpuMonitorCount {
 					avgGpu := calculateAverage(job.GpuUtilizations)
 					if avgGpu < GpuUtilizationThreshold {
-						reason := fmt.Sprintf("Average GPU utilization %.2f%% is below threshold %.0f%%", avgGpu, GpuUtilizationThreshold)
-						killSlurmJob(msg.JobID, reason, job.Logger)
-						jt.removeJob(msg.JobID, reason)
-						jt.mu.Unlock()
-						return
+						reason = fmt.Sprintf("Average GPU utilization %.2f%% is below threshold %.0f%%", avgGpu, GpuUtilizationThreshold)
 					}
 				}
 			}
-
-			// 确保作业还是存在的（没有因为 GPU 或心跳超时被移除）
-			if _, ok := jt.jobs[msg.JobID]; !ok {
-				jt.mu.Unlock()
-				return
-			}
-
-			// --- GPU 内存利用率处理 ---
-			if job.GpuMonitorCount > 0 {
+			// GPU 内存利用率
+			if job.GpuMonitorCount > 0 && reason == "" {
 				job.GpuMemoryUtilizations = append(job.GpuMemoryUtilizations, payload.GpuMemoryUtilization)
 				for len(job.GpuMemoryUtilizations) > job.GpuMonitorCount {
 					job.GpuMemoryUtilizations = job.GpuMemoryUtilizations[1:]
 				}
-
 				if len(job.GpuMemoryUtilizations) == job.GpuMonitorCount {
 					avgGpuMem := calculateAverage(job.GpuMemoryUtilizations)
 					if avgGpuMem < GpuMemoryUtilizationThreshold {
-						reason := fmt.Sprintf("Average GPU Memory utilization %.2f%% is below threshold %.0f%%", avgGpuMem, GpuMemoryUtilizationThreshold)
-						killSlurmJob(msg.JobID, reason, job.Logger)
-						jt.removeJob(msg.JobID, reason)
-						jt.mu.Unlock()
-						return
+						reason = fmt.Sprintf("Average GPU Memory utilization %.2f%% is below threshold %.0f%%", avgGpuMem, GpuMemoryUtilizationThreshold)
 					}
 				}
 			}
-
-			if _, ok := jt.jobs[msg.JobID]; !ok {
-				jt.mu.Unlock()
-				return
-			}
-
-			// 确保作业还是存在的（没有因为 GPU 或心跳超时被移除）
-			if _, ok := jt.jobs[msg.JobID]; !ok {
-				jt.mu.Unlock()
-				return
-			}
-
-			// --- CPU利用率处理 ---
-			if job.CpuMonitorCount > 0 {
+			// CPU 利用率
+			if job.CpuMonitorCount > 0 && reason == "" {
 				job.CpuUtilizations = append(job.CpuUtilizations, payload.CpuUtilization)
 				for len(job.CpuUtilizations) > job.CpuMonitorCount {
 					job.CpuUtilizations = job.CpuUtilizations[1:]
 				}
-
 				if len(job.CpuUtilizations) == job.CpuMonitorCount {
 					avgCpu := calculateAverage(job.CpuUtilizations)
 					if avgCpu < CpuUtilizationThreshold {
-						reason := fmt.Sprintf("Average CPU utilization %.2f%% is below threshold %.0f%%", avgCpu, CpuUtilizationThreshold)
-						killSlurmJob(msg.JobID, reason, job.Logger)
-						jt.removeJob(msg.JobID, reason)
-						jt.mu.Unlock()
-						return
+						reason = fmt.Sprintf("Average CPU utilization %.2f%% is below threshold %.0f%%", avgCpu, CpuUtilizationThreshold)
 					}
 				}
 			}
+
+			// 如果决定终止，则在锁内移除作业
+			if reason != "" {
+				jobToKillID = msg.JobID
+				jt.removeJob(jobToKillID, reason)
+			}
+			jt.mu.Unlock()
+
+			// 在锁外执行耗时的 kill 操作
+			if jobToKillID != "" {
+				killSlurmJob(jobToKillID, reason)
+				return // 终止作业后，关闭此连接
+			}
+
+		case "CANCEL":
+			jt.mu.Lock()
+			jobID := msg.JobID
+			if _, ok := jt.jobs[jobID]; ok {
+				reason := "Job cancelled by user request"
+				globalLogger.Printf("Received cancellation for job %s.", jobID)
+				jt.removeJob(jobID, reason)
+			} else {
+				globalLogger.Printf("Received cancellation for an unknown or already removed job %s.", jobID)
+			}
+			jt.mu.Unlock()
+			return
 		}
-		jt.mu.Unlock()
 	}
 }
 
@@ -285,31 +275,44 @@ func (jt *JobTracker) runStatusChecker() {
 
 	for range ticker.C {
 		globalLogger.Println("--- Running Heartbeat Status Check ---")
+
+		jobsToKill := make(map[string]string) // [jobID] -> reason
+
+		// 在锁内识别超时的任务，并从主 map 中移除
 		jt.mu.Lock()
 		for jobID, job := range jt.jobs {
 			if time.Since(job.LastHeartbeat) > HeartbeatTimeout {
 				reason := fmt.Sprintf("Heartbeat Timeout. Last heartbeat was %.0f seconds ago.", time.Since(job.LastHeartbeat).Seconds())
-				killSlurmJob(jobID, reason, job.Logger)
-				jt.removeJob(jobID, reason)
-				continue
+				jobsToKill[jobID] = reason
+				jt.removeJob(jobID, reason) // 在锁内安全移除
 			}
 		}
 		jt.mu.Unlock()
+
+		// 在锁外执行所有耗时的 scancel 命令
+		if len(jobsToKill) > 0 {
+			globalLogger.Printf("Found %d jobs to kill due to timeout.", len(jobsToKill))
+			for jobID, reason := range jobsToKill {
+				killSlurmJob(jobID, reason)
+			}
+		}
 		globalLogger.Println("--- Status Check Finished ---")
 	}
 }
 
-func killSlurmJob(jobID, reason string, logger *log.Logger) {
-	logger.Printf("[KILL] Executing 'scancel' for job %s, Reason: %s", jobID, reason)
+func killSlurmJob(jobID, reason string) error {
 	globalLogger.Printf("[KILL] Executing 'scancel' for job %s, Reason: %s", jobID, reason)
 
 	cmd := exec.Command("scancel", jobID)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		logger.Printf("Error running scancel for job %s: %v. Output: %s", jobID, err, string(output))
-	} else {
-		logger.Printf("Successfully ran scancel for job %s.", jobID)
+		errMsg := fmt.Errorf("error running scancel for job %s: %v. Output: %s", jobID, err, string(output))
+		globalLogger.Print(errMsg)
+		return errMsg
 	}
+
+	globalLogger.Printf("Successfully ran scancel for job %s.", jobID)
+	return nil
 }
 
 func calculateAverage(slice []float64) float64 {

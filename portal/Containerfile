@@ -9,13 +9,13 @@ RUN npm run build
 
 
 #--------------------- 后端构建阶段 ---------------------#
-FROM golang:1.24-alpine AS builder-backend
+FROM golang:1.24 AS builder-backend
 WORKDIR /app
-RUN apk add --no-cache git
+RUN apt-get install -y git
 RUN git clone https://github.com/itgrape/slurm-dashboard.git .
 WORKDIR /app/backend
 RUN go mod download
-RUN go build -o /app/server ./cmd/server
+RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o /app/server ./cmd/server
 
 
 #--------------------- 最终镜像阶段 ---------------------#

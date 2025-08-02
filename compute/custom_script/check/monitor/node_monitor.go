@@ -208,6 +208,7 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 				}
 				if len(job.GpuUtilizations) == job.GpuMonitorCount {
 					avgGpu := calculateAverage(job.GpuUtilizations)
+					globalLogger.Printf("Job %s, Average GPU Utilization: %.2f%%", msg.JobID, avgGpu)
 					if avgGpu < GpuUtilizationThreshold {
 						reason = fmt.Sprintf("Average GPU utilization %.2f%% is below threshold %.0f%%", avgGpu, GpuUtilizationThreshold)
 					}
@@ -221,6 +222,7 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 				}
 				if len(job.GpuMemoryUtilizations) == job.GpuMonitorCount {
 					avgGpuMem := calculateAverage(job.GpuMemoryUtilizations)
+					globalLogger.Printf("Job %s, Average GPU Memory Utilization: %.2f%%", msg.JobID, avgGpuMem)
 					if avgGpuMem < GpuMemoryUtilizationThreshold {
 						reason = fmt.Sprintf("Average GPU Memory utilization %.2f%% is below threshold %.0f%%", avgGpuMem, GpuMemoryUtilizationThreshold)
 					}
@@ -234,6 +236,7 @@ func (jt *JobTracker) handleConnection(conn net.Conn) {
 				}
 				if len(job.CpuUtilizations) == job.CpuMonitorCount {
 					avgCpu := calculateAverage(job.CpuUtilizations)
+					globalLogger.Printf("Job %s, Average CPU Utilization: %.2f%%", msg.JobID, avgCpu)
 					if avgCpu < CpuUtilizationThreshold {
 						reason = fmt.Sprintf("Average CPU utilization %.2f%% is below threshold %.0f%%", avgCpu, CpuUtilizationThreshold)
 					}

@@ -311,33 +311,47 @@ func getGpuUtilization() (float64, error) {
 
 // getGpuMemoryUtilization 获取所有GPU的平均内存利用率
 func getGpuMemoryUtilization() (float64, error) {
-	cmd := exec.Command("nvidia-smi", "--query-gpu=utilization.memory", "--format=csv,noheader,nounits")
+	cmd := exec.Command("nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits")
 	output, err := cmd.Output()
 	if err != nil {
-		return 0, fmt.Errorf("nvidia-smi command failed for memory utilization: %w", err)
+		return 0, fmt.Errorf("nvidia-smi command failed for memory usage: %w", err)
 	}
 
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	var totalUtil float64 = 0.0
+	var totalUsagePercent float64 = 0.0
 	var gpuCount int = 0
 
 	for _, line := range lines {
-		utilStr := strings.TrimSpace(line)
-		if utilStr == "" {
+		line = strings.TrimSpace(line)
+		if line == "" {
 			continue
 		}
-		util, err := strconv.ParseFloat(utilStr, 64)
+		parts := strings.Split(line, ", ")
+		if len(parts) != 2 {
+			continue
+		}
+		usedMem, err := strconv.ParseFloat(parts[0], 64)
 		if err != nil {
 			continue
 		}
-		totalUtil += util
+		totalMem, err := strconv.ParseFloat(parts[1], 64)
+		if err != nil {
+			continue
+		}
+		if totalMem == 0 {
+			continue
+		}
+
+		usagePercent := (usedMem / totalMem) * 100.0
+		totalUsagePercent += usagePercent
 		gpuCount++
 	}
 
 	if gpuCount == 0 {
-		return 0, fmt.Errorf("no valid GPU memory utilization data found")
+		return 0, fmt.Errorf("no valid GPU memory usage data found")
 	}
-	return totalUtil / float64(gpuCount), nil
+
+	return totalUsagePercent / float64(gpuCount), nil
 }
 
 func getCpuUtilization() (float64, error) {

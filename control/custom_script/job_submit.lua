@@ -13,21 +13,23 @@ end
 
 -- slurm_job_submit() 函数在新作业提交时被调用 (sbatch, salloc)。
 function slurm_job_submit(job_desc, part_list, submit_uid)
-    -- 检查用户是否指定了 --nodelist
-    -- job_desc.nodes 对应 --nodelist 参数
-    if job_desc.nodes ~= nil then
-        slurm.log_user("错误：不允许使用 --nodelist 参数指定节点。请移除该参数后重试。")
+    -- 检查 --nodelist 或 -w 参数 (检查用户请求的节点和最终分配的节点)
+    if (job_desc.req_nodes and job_desc.req_nodes ~= "") or (job_desc.nodes and job_desc.nodes ~= "") then
+        local user_message = "错误：不允许使用 --nodelist 或 -w 参数指定节点。请移除该参数后重试"
+        slurm.log_user(user_message)
+        slurm.log_info("已拒绝用户 " .. tostring(submit_uid) .. " 的作业，原因：使用了 --nodelist 或 -w")
         return slurm.ERROR
     end
 
-    -- 检查用户是否指定了 --exclude
-    -- job_desc.exc_nodes 对应 --exclude 参数
-    if job_desc.exc_nodes ~= nil then
-        slurm.log_user("错误：不允许使用 --exclude 参数排除节点。请移除该参数后重试。")
+    -- 检查 --exclude 参数
+    if (job_desc.exc_nodes and job_desc.exc_nodes ~= "") then
+        local user_message = "错误：不允许使用 --exclude 参数排除节点。请移除该参数后重试"
+        slurm.log_user(user_message)
+        slurm.log_info("已拒绝用户 " .. tostring(submit_uid) .. " 的作业，原因：使用了 --exclude")
         return slurm.ERROR
     end
 
-    -- 如果所有检查都通过，则允许作业提交
+    -- 允许作业提交
     return slurm.SUCCESS
 end
 

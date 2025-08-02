@@ -13,6 +13,7 @@ COPY slurm_config/gres.conf /etc/slurm/gres.conf
 COPY slurm_config/slurmdbd.conf /etc/slurm/slurmdbd.conf
 COPY custom_script/mail_wrapper.sh /usr/local/bin/mail_wrapper.sh
 COPY ssh_config/sshd_config /etc/ssh/sshd_config
+COPY custom_script/job_submit.lua /etc/slurm/job_submit.lua
 
 # File permissions
 RUN touch /var/log/slurmctld.log && chown slurm:slurm /var/log/slurmctld.log && chmod 640 /var/log/slurmctld.log && \

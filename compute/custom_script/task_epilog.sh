@@ -8,7 +8,7 @@ echo "[Epilog on ${NODE_HOSTNAME}] Cleaning up job processes..."
 # =============== 注销任务 ===============
 # =======================================
 HELPER_PATH="/usr/local/bin/job_helper"
-$HELPER_PATH cancel
+$HELPER_PATH cancel >> "${HOME}/.monitor/monitor-${SLURM_JOB_ID}-${NODE_HOSTNAME}.log"
 
 # =======================================
 # ============= 清理监控进程 ==============

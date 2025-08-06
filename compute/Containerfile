@@ -1,19 +1,17 @@
-FROM golang:1.24-alpine AS builder
+# Stage 1: Builder for Rust applications
+FROM rust:1.85-slim as builder
 
 RUN mkdir -p /app/bin
+COPY custom_script/check /app
 
 WORKDIR /app/client
-COPY custom_script/check/client/go.mod custom_script/check/client/go.sum custom_script/check/client/job_helper.go ./
-RUN go mod download && go mod tidy
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/bin/job_helper .
+RUN cargo build --release && mv target/release/client /app/bin/job_helper
 
 WORKDIR /app/monitor
-COPY custom_script/check/monitor/go.mod custom_script/check/monitor/node_monitor.go ./
-RUN go mod download && go mod tidy
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/bin/node_monitor .
+RUN cargo build --release && mv target/release/monitor /app/bin/node_monitor
 
 
-
+# Stage 2: Final Image
 FROM crpi-g0cm9l3tvvpecg9b.cn-shanghai.personal.cr.aliyuncs.com/pushihao/ohpc:base
 LABEL maintainer="pushihao@njust.edu.cn"
 
